@@ -82,96 +82,6 @@ function getStickerForEmotion(emotion) {
   return stickers[emotion] || '👍';
 }
 
-// Helper function to generate personalized thread title (for group discussions)
-function generateThreadTitle(message, aiResponse) {
-  const messageText = message.toLowerCase();
-  const responseText = aiResponse.toLowerCase();
-  
-  // Extract key topics from the message
-  const topics = [];
-  
-  // Check for specific topics
-  if (messageText.includes('harry potter') || messageText.includes('hogwarts')) {
-    topics.push('Harry Potter');
-  }
-  if (messageText.includes('programming') || messageText.includes('code') || messageText.includes('development') || messageText.includes('php') || messageText.includes('javascript') || messageText.includes('python')) {
-    topics.push('Programming');
-  }
-  if (messageText.includes('ai') || messageText.includes('artificial intelligence')) {
-    topics.push('AI Discussion');
-  }
-  if (messageText.includes('telegram') || messageText.includes('bot')) {
-    topics.push('Telegram Bot');
-  }
-  if (messageText.includes('help') || messageText.includes('question')) {
-    topics.push('Q&A');
-  }
-  if (messageText.includes('project') || messageText.includes('planning')) {
-    topics.push('Project Discussion');
-  }
-  if (messageText.includes('tutorial') || messageText.includes('guide')) {
-    topics.push('Tutorial');
-  }
-  if (messageText.includes('dragon ball') || messageText.includes('one piece') || messageText.includes('anime')) {
-    topics.push('Anime Discussion');
-  }
-  if (messageText.includes('straw hat') || messageText.includes('one piece')) {
-    topics.push('One Piece Discussion');
-  }
-  if (messageText.includes('fried chicken') || messageText.includes('food') || messageText.includes('cooking') || messageText.includes('recipe')) {
-    topics.push('Food Discussion');
-  }
-  if (messageText.includes('movie') || messageText.includes('film') || messageText.includes('cinema')) {
-    topics.push('Movie Discussion');
-  }
-  if (messageText.includes('game') || messageText.includes('gaming') || messageText.includes('gta') || messageText.includes('video game')) {
-    topics.push('Gaming Discussion');
-  }
-  if (messageText.includes('music') || messageText.includes('song') || messageText.includes('band')) {
-    topics.push('Music Discussion');
-  }
-  if (messageText.includes('sport') || messageText.includes('football') || messageText.includes('basketball') || messageText.includes('soccer')) {
-    topics.push('Sports Discussion');
-  }
-  if (messageText.includes('travel') || messageText.includes('vacation') || messageText.includes('trip')) {
-    topics.push('Travel Discussion');
-  }
-  if (messageText.includes('book') || messageText.includes('reading') || messageText.includes('novel')) {
-    topics.push('Books Discussion');
-  }
-  if (messageText.includes('science') || messageText.includes('technology') || messageText.includes('tech')) {
-    topics.push('Science & Tech Discussion');
-  }
-  
-  // If we found specific topics, use them
-  if (topics.length > 0) {
-    return topics.join(' & ') + ' Discussion';
-  }
-  
-  // Extract first few meaningful words from the message as fallback
-  const words = message.split(' ').filter(word => 
-    word.length > 2 && 
-    !['the', 'and', 'or', 'but', 'in', 'on', 'at', 'to', 'for', 'of', 'with', 'by', 'a', 'an'].includes(word.toLowerCase())
-  ).slice(0, 3);
-  
-  if (words.length > 0) {
-    const cleanWords = words.join(' ').replace(/[^\w\s]/g, '').trim();
-    if (cleanWords.length > 0) {
-      return cleanWords + ' Discussion';
-    }
-  }
-  
-  // Extract first few words from the message as fallback
-  const fallbackWords = message.split(' ').slice(0, 3).join(' ');
-  const cleanFallback = fallbackWords.replace(/[^\w\s]/g, '').trim();
-  
-  if (cleanFallback.length > 0) {
-    return cleanFallback + ' Discussion';
-  }
-  
-  // Final fallback
-  return 'General Discussion';
-}
 
 // Helper function to get user display name (first name or username)
 function getUserDisplayName(user) {
@@ -195,37 +105,6 @@ function generateWelcomeMessage(user) {
   return welcomeMessages[Math.floor(Math.random() * welcomeMessages.length)];
 }
 
-// Helper function to check if message should create a discussion topic
-function shouldCreateDiscussionTopic(message, aiResponse) {
-  const messageText = message.toLowerCase();
-  const responseText = aiResponse.toLowerCase();
-  
-  // Check if user explicitly wants to discuss a topic
-  const discussionKeywords = [
-    'discuss', 'talk about', 'chat about', 'discussion', 'conversation',
-    'create topic', 'start topic', 'new topic', 'let\'s talk'
-  ];
-  
-  const wantsToDiscuss = discussionKeywords.some(keyword => 
-    messageText.includes(keyword)
-  );
-  
-  // Check if response is very long (more than 200 characters)
-  const isVeryLongResponse = aiResponse.length > 200;
-  
-  // Check if it's a complex topic that might need follow-up
-  const complexKeywords = [
-    'tutorial', 'guide', 'step by step', 'how to', 'explain in detail',
-    'project', 'planning', 'brainstorm', 'discussion', 'debate'
-  ];
-  
-  const isComplexTopic = complexKeywords.some(keyword => 
-    messageText.includes(keyword) || responseText.includes(keyword)
-  );
-  
-  // Create discussion topic if user wants to discuss OR topic is very long/complex
-  return wantsToDiscuss || (isVeryLongResponse && isComplexTopic);
-}
 
 // Function to send message to Telegram
 async function sendMessage(chatId, text, withReactions = false) {
@@ -356,7 +235,7 @@ async function getUpdates() {
               } else if (text.startsWith('/help')) {
                 await sendMessage(chatId, `Vox AI Commands:\n/start - Start the bot\n/help - Show this help\n/status - Check bot status\n\nJust send me any message to chat!`);
               } else if (text.startsWith('/status')) {
-                await sendMessage(chatId, `Vox AI is online and ready! ✅\n\nI can help you with:\n• General questions\n• Information requests\n• Casual conversation\n• Remember our previous conversations\n• React to your emotions\n• Discussion topics in groups\n\nTry asking me anything!`);
+                await sendMessage(chatId, `Vox AI is online and ready! ✅\n\nI can help you with:\n• General questions\n• Information requests\n• Casual conversation\n• Remember our previous conversations\n• React to your emotions\n\nTry asking me anything!`);
               } else if (text.trim()) {
                 // Check if this is a group message and if the bot is mentioned
                 const isGroup = message.chat.type === 'group' || message.chat.type === 'supergroup';
@@ -446,39 +325,6 @@ Special features:
                       // Add AI response to memory
                       addToMemory(message.from.id, 'assistant', aiResponse);
                       
-                      // Check if user explicitly wants to create a discussion topic
-                      if (message.chat.type === 'group' || message.chat.type === 'supergroup') {
-                        if (cleanText.toLowerCase().includes('create topic') || cleanText.toLowerCase().includes('start discussion') || cleanText.toLowerCase().includes('discuss topic')) {
-                          // Extract the actual topic from the message
-                          let topic = cleanText;
-                          
-                          // Remove common topic creation phrases to get the actual topic
-                          topic = topic.replace(/create topic about/gi, '');
-                          topic = topic.replace(/create topic for/gi, '');
-                          topic = topic.replace(/start discussion about/gi, '');
-                          topic = topic.replace(/discuss topic about/gi, '');
-                          topic = topic.replace(/create topic/gi, '');
-                          topic = topic.replace(/start discussion/gi, '');
-                          topic = topic.replace(/discuss topic/gi, '');
-                          topic = topic.replace(/about/gi, '');
-                          topic = topic.trim();
-                          
-                          // If no topic extracted, use the original message
-                          if (!topic || topic.length < 3) {
-                            topic = cleanText;
-                          }
-                          
-                          // Generate personalized topic title
-                          const topicTitle = generateThreadTitle(topic, aiResponse);
-                          
-                          await sendMessage(chatId, `📌 **Discussion Topic: ${topicTitle}**\n\nThis seems like a great topic for discussion! Feel free to continue the conversation here. I'll be monitoring and can help with follow-up questions!`);
-                          console.log(`📌 Created discussion topic: ${topicTitle} (user requested) - Original topic: "${topic}"`);
-                        } else if (shouldCreateDiscussionTopic(cleanText, aiResponse)) {
-                          const topicTitle = generateThreadTitle(cleanText, aiResponse);
-                          await sendMessage(chatId, `📌 **Discussion Topic: ${topicTitle}**\n\nThis seems like a great topic for discussion! Feel free to continue the conversation here. I'll be monitoring and can help with follow-up questions!`);
-                          console.log(`📌 Created discussion topic: ${topicTitle}`);
-                        }
-                      }
                       
                       // Send AI response to user with reactions
                       await sendMessage(chatId, aiResponse, true);
