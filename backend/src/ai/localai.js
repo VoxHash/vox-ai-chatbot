@@ -1,6 +1,7 @@
 import axios from 'axios';
 
-const LLAMA_URL = process.env.LLAMA_URL || 'http://llama-server:8080';
+// Use localhost for external connections, Docker service name for internal
+const LLAMA_URL = process.env.LLAMA_URL || 'http://localhost:8081';
 
 export async function completeChat(messages) {
   try {
