@@ -1,132 +1,174 @@
 import 'dotenv/config';
-import express from 'express';
-import fetch from 'node-fetch';
-import crypto from 'crypto';
+import { Client, GatewayIntentBits, Events, SlashCommandBuilder, REST, Routes } from 'discord.js';
 import { completeChat } from '../ai/openai.js';
-
-const app = express();
-app.use(express.json());
 
 const DISCORD_BOT_TOKEN = process.env.DISCORD_BOT_TOKEN;
 const DISCORD_CLIENT_ID = process.env.DISCORD_CLIENT_ID;
-const DISCORD_CLIENT_SECRET = process.env.DISCORD_CLIENT_SECRET;
-const DISCORD_PUBLIC_KEY = process.env.DISCORD_PUBLIC_KEY;
 
 if (!DISCORD_BOT_TOKEN) {
   console.log('DISCORD_BOT_TOKEN not set. Discord integration disabled.');
+  process.exit(0);
 }
 
-// Verify Discord request signature
-function verifyDiscord(req) {
-  const signature = req.headers['x-signature-ed25519'];
-  const timestamp = req.headers['x-signature-timestamp'];
-  const body = req.rawBody || JSON.stringify(req.body);
-  
-  if (!signature || !timestamp || !DISCORD_PUBLIC_KEY) {
-    return false;
-  }
-
-  const publicKey = Buffer.from(DISCORD_PUBLIC_KEY, 'hex');
-  const message = Buffer.from(timestamp + body);
-  
-  try {
-    const crypto = require('crypto');
-    const verify = crypto.createVerify('ed25519');
-    verify.update(message);
-    return verify.verify(publicKey, Buffer.from(signature, 'hex'));
-  } catch (error) {
-    console.error('Discord signature verification error:', error);
-    return false;
-  }
-}
-
-// Handle Discord interactions
-app.post('/discord/interactions', async (req, res) => {
-  // Skip signature verification for demo purposes
-  // if (!verifyDiscord(req)) {
-  //   return res.status(401).json({ error: 'Invalid signature' });
-  // }
-
-  const { type, data, member, channel_id } = req.body;
-
-  if (type === 1) { // PING
-    return res.json({ type: 1 }); // PONG
-  }
-
-  if (type === 2) { // APPLICATION_COMMAND
-    const commandName = data.name;
-    
-      if (commandName === 'chat') {
-        const message = data.options?.[0]?.value || 'Hello!';
-        
-        try {
-          console.log(`🧠 Processing Discord message with AI: ${message}`);
-          
-          const messages = [
-            { 
-              role: 'system', 
-              content: 'You are Vox AI, a helpful and intelligent assistant. You can help with questions, provide information, have conversations, and assist with various topics. Be friendly, informative, and engaging in your responses.' 
-            },
-            { 
-              role: 'user', 
-              content: message 
-            }
-          ];
-          
-          const aiResponse = await completeChat(messages);
-          console.log(`🤖 AI Response: ${aiResponse}`);
-          
-          // Send AI response to Discord
-          const response = {
-            type: 4, // CHANNEL_MESSAGE_WITH_SOURCE
-            data: {
-              content: `🤖 Vox AI: ${aiResponse}`,
-              allowed_mentions: { parse: [] }
-            }
-          };
-          
-          return res.json(response);
-          
-        } catch (error) {
-          console.error('AI processing error:', error);
-          
-          // Fallback response if AI fails
-          const response = {
-            type: 4, // CHANNEL_MESSAGE_WITH_SOURCE
-            data: {
-              content: `🤖 Vox AI: I apologize, but I'm having trouble processing your request right now. Please try again in a moment.`,
-              allowed_mentions: { parse: [] }
-            }
-          };
-          
-          return res.json(response);
-        }
-      }
-  }
-
-  if (type === 3) { // MESSAGE_COMPONENT
-    // Handle button clicks, select menus, etc.
-    return res.json({ type: 4, data: { content: 'Component interaction received!' } });
-  }
-
-  res.status(400).json({ error: 'Unknown interaction type' });
+// Create Discord client with basic intents (MessageContent requires special approval)
+const client = new Client({
+  intents: [
+    GatewayIntentBits.Guilds,
+    GatewayIntentBits.GuildMessages,
+    GatewayIntentBits.DirectMessages
+  ]
 });
 
-// Health check endpoint
+// Bot ready event
+client.once(Events.ClientReady, readyClient => {
+  console.log(`🤖 Discord bot ready! Logged in as ${readyClient.user.tag}`);
+  console.log(`🆔 Bot ID: ${readyClient.user.id}`);
+  console.log(`📱 Bot is online and ready to chat in DMs and servers!`);
+});
+
+// Handle slash commands
+client.on(Events.InteractionCreate, async interaction => {
+  if (!interaction.isChatInputCommand()) return;
+
+  if (interaction.commandName === 'chat') {
+    const message = interaction.options.getString('message') || 'Hello!';
+    
+    try {
+      console.log(`🧠 Processing Discord message with AI: ${message}`);
+      console.log(`📍 Channel: ${interaction.channel.type === 'DM' ? 'DM' : interaction.channel.name}`);
+      console.log(`👤 User: ${interaction.user.username}`);
+      
+      // Show typing indicator
+      await interaction.deferReply();
+      
+      const messages = [
+        { 
+          role: 'system', 
+          content: 'You are Vox AI, a helpful and intelligent assistant. You can help with questions, provide information, have conversations, and assist with various topics. Be friendly, informative, and engaging in your responses.' 
+        },
+        { 
+          role: 'user', 
+          content: message 
+        }
+      ];
+      
+      const aiResponse = await completeChat(messages);
+      console.log(`🤖 AI Response: ${aiResponse}`);
+      
+      // Send AI response to Discord
+      await interaction.editReply(`🤖 Vox AI: ${aiResponse}`);
+      
+    } catch (error) {
+      console.error('AI processing error:', error);
+      
+      // Fallback response if AI fails
+      await interaction.editReply(`🤖 Vox AI: I apologize, but I'm having trouble processing your request right now. Please try again in a moment.`);
+    }
+  }
+});
+
+// Handle direct messages (only when bot is mentioned - requires MessageContent intent for full DM support)
+client.on(Events.MessageCreate, async message => {
+  // Ignore messages from bots (including ourselves)
+  if (message.author.bot) return;
+  
+  // Only respond if bot is mentioned (works without MessageContent intent)
+  const isMentioned = message.mentions.has(client.user);
+  
+  if (!isMentioned) return;
+  
+  try {
+    console.log(`📱 Received mention from ${message.author.username}: ${message.content}`);
+    console.log(`📍 Channel: ${message.channel.type === 'DM' ? 'DM' : message.channel.name}`);
+    
+    // Show typing indicator
+    await message.channel.sendTyping();
+    
+    // Remove the mention from the message content
+    const cleanContent = message.content.replace(/<@!?\d+>/g, '').trim();
+    
+    const messages = [
+      { 
+        role: 'system', 
+        content: 'You are Vox AI, a helpful and intelligent assistant. You can help with questions, provide information, have conversations, and assist with various topics. Be friendly, informative, and engaging in your responses.' 
+      },
+      { 
+        role: 'user', 
+        content: cleanContent || 'Hello!' 
+      }
+    ];
+    
+    const aiResponse = await completeChat(messages);
+    console.log(`🤖 AI Response: ${aiResponse}`);
+    
+    // Send AI response to Discord
+    await message.reply(`🤖 Vox AI: ${aiResponse}`);
+    
+  } catch (error) {
+    console.error('AI processing error:', error);
+    
+    // Fallback response if AI fails
+    await message.reply(`🤖 Vox AI: I apologize, but I'm having trouble processing your request right now. Please try again in a moment.`);
+  }
+});
+
+// Register slash commands
+async function registerSlashCommands() {
+  const commands = [
+    new SlashCommandBuilder()
+      .setName('chat')
+      .setDescription('Chat with Vox AI')
+      .addStringOption(option =>
+        option
+          .setName('message')
+          .setDescription('The message to send to Vox AI')
+          .setRequired(true)
+      )
+  ];
+
+  const rest = new REST().setToken(DISCORD_BOT_TOKEN);
+
+  try {
+    console.log('🚀 Registering Discord slash commands...');
+    
+    await rest.put(
+      Routes.applicationCommands(DISCORD_CLIENT_ID),
+      { body: commands }
+    );
+
+    console.log('✅ Discord slash commands registered successfully!');
+    console.log('📋 Available commands:');
+    console.log('   /chat - Chat with Vox AI');
+    console.log('\n🎉 You can now use /chat in your Discord server or DMs!');
+  } catch (error) {
+    console.error('❌ Error registering commands:', error);
+  }
+}
+
+// Login to Discord
+client.login(DISCORD_BOT_TOKEN).then(() => {
+  registerSlashCommands();
+}).catch(error => {
+  console.error('❌ Failed to login to Discord:', error);
+  process.exit(1);
+});
+
+// Health check endpoint (for monitoring)
+import express from 'express';
+const app = express();
+app.use(express.json());
+
 app.get('/discord/health', (req, res) => {
   res.json({ 
     status: 'ok', 
     bot_token_set: !!DISCORD_BOT_TOKEN,
-    client_id_set: !!DISCORD_CLIENT_ID 
+    client_id_set: !!DISCORD_CLIENT_ID,
+    bot_ready: client.isReady(),
+    bot_user: client.user ? client.user.tag : null
   });
 });
 
 const PORT = process.env.DISCORD_PORT || 4003;
 app.listen(PORT, () => {
-  console.log(`Discord bot webhook running on port ${PORT}`);
-  if (DISCORD_BOT_TOKEN) {
-    console.log('Discord bot token configured');
-  } else {
-    console.log('Discord bot token not configured - integration disabled');
-  }
+  console.log(`📊 Discord bot health endpoint running on port ${PORT}`);
 });
