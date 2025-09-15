@@ -16,6 +16,72 @@ const api = `https://api.telegram.org/bot${token}`;
 // Store last update ID to avoid processing the same message twice
 let lastUpdateId = 0;
 
+// Memory system for conversation context
+const conversationMemory = new Map();
+const MAX_MEMORY_SIZE = 10; // Keep last 10 messages per user
+
+// Helper function to get conversation history
+function getConversationHistory(userId) {
+  return conversationMemory.get(userId) || [];
+}
+
+// Helper function to add message to memory
+function addToMemory(userId, role, content) {
+  if (!conversationMemory.has(userId)) {
+    conversationMemory.set(userId, []);
+  }
+  
+  const history = conversationMemory.get(userId);
+  history.push({ role, content, timestamp: Date.now() });
+  
+  // Keep only last MAX_MEMORY_SIZE messages
+  if (history.length > MAX_MEMORY_SIZE) {
+    history.splice(0, history.length - MAX_MEMORY_SIZE);
+  }
+  
+  conversationMemory.set(userId, history);
+}
+
+// Helper function to detect emotions in user messages
+function detectEmotion(text) {
+  const lowerText = text.toLowerCase();
+  
+  if (lowerText.includes('😊') || lowerText.includes(':)') || lowerText.includes('happy') || lowerText.includes('great') || lowerText.includes('awesome') || lowerText.includes('thanks') || lowerText.includes('thank you')) {
+    return 'happy';
+  }
+  if (lowerText.includes('😢') || lowerText.includes(':(') || lowerText.includes('sad') || lowerText.includes('upset') || lowerText.includes('disappointed')) {
+    return 'sad';
+  }
+  if (lowerText.includes('😡') || lowerText.includes('angry') || lowerText.includes('mad') || lowerText.includes('frustrated')) {
+    return 'angry';
+  }
+  if (lowerText.includes('😮') || lowerText.includes('wow') || lowerText.includes('amazing') || lowerText.includes('incredible')) {
+    return 'surprised';
+  }
+  if (lowerText.includes('🤔') || lowerText.includes('hmm') || lowerText.includes('confused') || lowerText.includes('?') || lowerText.includes('help')) {
+    return 'confused';
+  }
+  if (lowerText.includes('❤️') || lowerText.includes('love') || lowerText.includes('heart')) {
+    return 'love';
+  }
+  
+  return 'neutral';
+}
+
+// Helper function to get appropriate sticker for emotion
+function getStickerForEmotion(emotion) {
+  const stickers = {
+    'happy': '😊',
+    'sad': '😢',
+    'angry': '😡',
+    'surprised': '😮',
+    'confused': '🤔',
+    'love': '❤️',
+    'neutral': '👍'
+  };
+  return stickers[emotion] || '👍';
+}
+
 // Function to send message to Telegram
 async function sendMessage(chatId, text, withReactions = false) {
   try {
@@ -65,27 +131,32 @@ async function getUpdates() {
             if (update.callback_query) {
               const callbackQuery = update.callback_query;
               const chatId = callbackQuery.message.chat.id;
+              const userId = callbackQuery.from.id;
               const data = callbackQuery.data;
               const username = callbackQuery.from.username || callbackQuery.from.first_name || 'User';
               
               console.log(`😊 Received callback from ${username}: ${data}`);
               
+              // Get user's conversation history for personalized response
+              const history = getConversationHistory(userId);
+              const lastUserMessage = history.filter(msg => msg.role === 'user').slice(-1)[0]?.content || '';
+              
               let response = '';
               switch (data) {
                 case 'reaction_like':
-                  response = '😊 Thanks for the positive feedback! I\'m glad I could help!';
+                  response = `😊 Thanks for the positive feedback, ${username}! I'm glad I could help! ${lastUserMessage ? `I hope my response about "${lastUserMessage.substring(0, 50)}..." was helpful!` : ''}`;
                   break;
                 case 'reaction_dislike':
-                  response = '😔 I\'m sorry my response wasn\'t helpful. Could you tell me what I can improve?';
+                  response = `😔 I see you didn't find that helpful, ${username}. Could you tell me what I can improve? I want to give you the best possible response!`;
                   break;
                 case 'reaction_idea':
-                  response = '💡 Great idea! Feel free to share more thoughts or ask follow-up questions!';
+                  response = `💡 Great idea, ${username}! I love your thinking! Feel free to share more thoughts or ask follow-up questions!`;
                   break;
                 case 'reaction_question':
-                  response = '❓ I\'m here to help! What would you like to know more about?';
+                  response = `❓ I'm here to help, ${username}! What would you like to know more about? I'm ready to dive deeper into any topic!`;
                   break;
                 default:
-                  response = 'Thanks for your feedback!';
+                  response = `Thanks for your feedback, ${username}!`;
               }
               
               await sendMessage(chatId, `🤖 Vox AI: ${response}`);
@@ -114,25 +185,48 @@ async function getUpdates() {
           } else if (text.startsWith('/help')) {
             await sendMessage(chatId, `🤖 Vox AI Commands:\n/start - Start the bot\n/help - Show this help\n/status - Check bot status\n\nJust send me any message to chat!`);
           } else if (text.startsWith('/status')) {
-            await sendMessage(chatId, `🤖 Vox AI is online and ready! ✅\n\nI can help you with:\n• General questions\n• Information requests\n• Casual conversation\n\nTry asking me anything!`);
+            await sendMessage(chatId, `🤖 Vox AI is online and ready! ✅\n\nI can help you with:\n• General questions\n• Information requests\n• Casual conversation\n• Remember our previous conversations\n• React to your emotions\n\nTry asking me anything!`);
           } else if (text.trim()) {
+            // Add user message to memory
+            addToMemory(message.from.id, 'user', text);
+            
+            // Get conversation history
+            const history = getConversationHistory(message.from.id);
+            
             // Use AI model to generate response
             try {
               console.log(`🧠 Processing message with AI: ${text}`);
               
+              // Build messages with memory
               const messages = [
                 { 
                   role: 'system', 
-                  content: 'You are Vox, a helpful and intelligent assistant. You can help with questions, provide information, have conversations, and assist with various topics. Be friendly, informative, and engaging in your responses.' 
-                },
-                { 
-                  role: 'user', 
-                  content: text 
+                  content: `You are Vox AI, a helpful and intelligent assistant created by VoxHash. You can help with questions, provide information, have conversations, and assist with various topics. Be friendly, informative, and engaging in your responses.
+
+If someone asks about your creator, mention that you were created by VoxHash and direct them to https://voxhash.dev or https://github.com/VoxHash for more information.
+
+You have access to conversation history to provide better context-aware responses.
+
+Special features:
+- You remember previous conversations for better context
+- You can detect and respond to user emotions
+- You provide personalized responses based on conversation history` 
                 }
               ];
               
+              // Add conversation history
+              history.forEach(msg => {
+                messages.push({ role: msg.role, content: msg.content });
+              });
+              
+              // Add current message
+              messages.push({ role: 'user', content: text });
+              
               const aiResponse = await completeChat(messages);
-              console.log(`${aiResponse}`);
+              console.log(`🤖 AI Response: ${aiResponse}`);
+              
+              // Add AI response to memory
+              addToMemory(message.from.id, 'assistant', aiResponse);
               
               // Send AI response to user with reactions
               await sendMessage(chatId, `🤖 Vox AI: ${aiResponse}`, true);
@@ -140,7 +234,7 @@ async function getUpdates() {
             } catch (error) {
               console.error('AI processing error:', error);
               // Fallback response if AI fails
-              await sendMessage(chatId, `I apologize, but I'm having trouble processing your request right now. Please try again in a moment.`);
+              await sendMessage(chatId, `🤖 Vox AI: I apologize, but I'm having trouble processing your request right now. Please try again in a moment.`);
             }
           }
         }

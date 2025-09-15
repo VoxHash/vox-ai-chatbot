@@ -120,6 +120,41 @@ function shouldCreateThread(message, aiResponse, userMessage) {
   return wantsToContinue || (isVeryLongResponse && isComplexTopic);
 }
 
+// Helper function to check if user wants to change nickname
+function wantsToChangeNickname(message) {
+  const lowerMessage = message.toLowerCase();
+  const nicknameKeywords = [
+    'change my nickname', 'change nickname', 'change my name', 'change name',
+    'change username', 'change my username', 'set nickname', 'set name',
+    'update nickname', 'update name', 'rename me', 'change my display name'
+  ];
+  
+  return nicknameKeywords.some(keyword => lowerMessage.includes(keyword));
+}
+
+// Helper function to extract new nickname from message
+function extractNewNickname(message) {
+  const patterns = [
+    /change my nickname to (.+)/i,
+    /change nickname to (.+)/i,
+    /change my name to (.+)/i,
+    /change name to (.+)/i,
+    /set nickname to (.+)/i,
+    /set name to (.+)/i,
+    /rename me to (.+)/i,
+    /call me (.+)/i
+  ];
+  
+  for (const pattern of patterns) {
+    const match = message.match(pattern);
+    if (match && match[1]) {
+      return match[1].trim().replace(/[^\w\s-]/g, ''); // Remove special chars except spaces and hyphens
+    }
+  }
+  
+  return null;
+}
+
 // Bot ready event
 client.once(Events.ClientReady, readyClient => {
   console.log(`🤖 Discord bot ready! Logged in as ${readyClient.user.tag}`);
@@ -237,6 +272,31 @@ client.on(Events.MessageCreate, async message => {
       cleanContent = 'Hello!';
     }
     
+    // Check if user wants to change nickname
+    if (wantsToChangeNickname(cleanContent)) {
+      const newNickname = extractNewNickname(cleanContent);
+      
+      if (newNickname && message.guild) {
+        try {
+          // Try to change the user's nickname
+          await message.member.setNickname(newNickname);
+          await message.reply(`🤖 Vox AI: Great! I've changed your nickname to "${newNickname}"! 🎉`);
+          console.log(`📝 Changed nickname for ${message.author.username} to ${newNickname}`);
+          return;
+        } catch (error) {
+          console.log('Could not change nickname:', error.message);
+          await message.reply(`🤖 Vox AI: I'm sorry, I don't have permission to change your nickname. Please ask an admin to help you! 😔`);
+          return;
+        }
+      } else if (message.guild) {
+        await message.reply(`🤖 Vox AI: I'd be happy to help you change your nickname! Please tell me what you'd like your new nickname to be. For example: "change my nickname to John" or "call me Alex"! 😊`);
+        return;
+      } else {
+        await message.reply(`🤖 Vox AI: I can only change nicknames in servers, not in DMs. Please ask me in a server channel! 😊`);
+        return;
+      }
+    }
+    
     // Add user message to memory
     addToMemory(userId, 'user', cleanContent);
     
@@ -287,20 +347,19 @@ Special features:
       console.log('Could not add emotion reaction:', error.message);
     }
     
-    // Create thread if this seems like a complex discussion (only in servers)
+    // Ask user if they want to create a thread for complex discussions (only in servers)
     if (message.channel.type !== 'DM' && shouldCreateThread(cleanContent, aiResponse, cleanContent)) {
       try {
-        const threadName = `vox-discussion-${Date.now()}`;
-        const thread = await responseMessage.startThread({
-          name: threadName,
-          autoArchiveDuration: 60, // 1 hour
-          reason: 'Complex discussion that might need follow-up'
-        });
+        // Ask user if they want a thread instead of creating it automatically
+        const threadQuestion = await message.channel.send(`🤖 Vox AI: This seems like a complex topic that might benefit from a dedicated thread for better organization. Would you like me to create a thread for this discussion? Just reply with "yes" or "no"! 🧵`);
         
-        await thread.send(`🧵 **Thread created for this discussion!**\n\nFeel free to continue the conversation here. I'll be monitoring this thread and can help with follow-up questions!`);
-        console.log(`🧵 Created thread: ${threadName}`);
+        // Add reactions to the question for easy response
+        await threadQuestion.react('✅'); // Yes
+        await threadQuestion.react('❌'); // No
+        
+        console.log(`🤔 Asked user about thread creation for complex topic`);
       } catch (error) {
-        console.log('Could not create thread:', error.message);
+        console.log('Could not ask about thread creation:', error.message);
       }
     }
     
@@ -312,19 +371,89 @@ Special features:
   }
 });
 
-// Handle reaction events (now only for user message reactions)
+// Handle reaction events (now for both user and bot message reactions)
 client.on(Events.MessageReactionAdd, async (reaction, user) => {
   // Ignore reactions from bots
   if (user.bot) return;
   
-  // Only respond to reactions on user messages (not our own)
-  if (reaction.message.author.id === client.user.id) return;
-  
   try {
     const emoji = reaction.emoji.name;
-    console.log(`😊 Received reaction ${emoji} from ${user.username} on user message`);
+    console.log(`😊 Received reaction ${emoji} from ${user.username}`);
     
-    // Only respond to our emotion stickers
+    // Handle thread creation reactions
+    if (reaction.message.author.id === client.user.id && reaction.message.content.includes('create a thread')) {
+      if (emoji === '✅') {
+        try {
+          const threadName = `vox-discussion-${Date.now()}`;
+          const thread = await reaction.message.startThread({
+            name: threadName,
+            autoArchiveDuration: 60, // 1 hour
+            reason: 'User requested thread creation'
+          });
+          
+          await thread.send(`🧵 **Thread created for this discussion!**\n\nFeel free to continue the conversation here. I'll be monitoring this thread and can help with follow-up questions!`);
+          console.log(`🧵 Created thread: ${threadName} (user requested)`);
+        } catch (error) {
+          console.log('Could not create thread:', error.message);
+          await reaction.message.channel.send(`🤖 Vox AI: I'm sorry, I couldn't create the thread. Please try again later! 😔`);
+        }
+      } else if (emoji === '❌') {
+        await reaction.message.channel.send(`🤖 Vox AI: No problem! We'll continue the conversation here. Feel free to ask me anything! 😊`);
+      }
+      return;
+    }
+    
+    // Handle reactions on bot messages (personalized responses)
+    if (reaction.message.author.id === client.user.id) {
+      const userId = user.id;
+      const userName = user.username;
+      
+      // Get user's conversation history for personalized response
+      const history = getConversationHistory(userId);
+      const lastUserMessage = history.filter(msg => msg.role === 'user').slice(-1)[0]?.content || '';
+      
+      let response = '';
+      switch (emoji) {
+        case '👍':
+          response = `👍 Thanks for the thumbs up, ${userName}! I'm glad I could help! ${lastUserMessage ? `I hope my response about "${lastUserMessage.substring(0, 50)}..." was helpful!` : ''}`;
+          break;
+        case '👎':
+          response = `👎 I see you didn't find that helpful, ${userName}. Could you tell me what I can improve? I want to give you the best possible response!`;
+          break;
+        case '💡':
+          response = `💡 Great idea, ${userName}! I love your thinking! Feel free to share more thoughts or ask follow-up questions!`;
+          break;
+        case '❓':
+          response = `❓ I'm here to help, ${userName}! What would you like to know more about? I'm ready to dive deeper into any topic!`;
+          break;
+        case '❤️':
+          response = `❤️ Thank you for the love, ${userName}! I really appreciate your kindness! You're awesome!`;
+          break;
+        case '😊':
+          response = `😊 I can see you're happy, ${userName}! That makes me happy too! I'm glad I could brighten your day!`;
+          break;
+        case '😢':
+          response = `😢 I notice you seem sad, ${userName}. Is there anything I can do to help? I'm here for you!`;
+          break;
+        case '😡':
+          response = `😡 I see you're frustrated, ${userName}. Let me know how I can better assist you. I want to help!`;
+          break;
+        case '😮':
+          response = `😮 Wow, ${userName}! I'm glad that surprised you in a good way! I love those "aha!" moments!`;
+          break;
+        case '🤔':
+          response = `🤔 I see you're thinking about this, ${userName}. Feel free to ask any follow-up questions! I'm here to help you explore!`;
+          break;
+        default:
+          return;
+      }
+      
+      // Send personalized response
+      await reaction.message.channel.send(`🤖 Vox AI: ${response}`);
+      return;
+    }
+    
+    // Handle reactions on user messages (emotion stickers)
     const emotionStickers = ['😊', '😢', '😡', '😮', '🤔', '❤️', '👍'];
     if (emotionStickers.includes(emoji)) {
       let response = '';
