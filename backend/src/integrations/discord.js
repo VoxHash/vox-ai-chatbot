@@ -2,6 +2,7 @@ import 'dotenv/config';
 import express from 'express';
 import fetch from 'node-fetch';
 import crypto from 'crypto';
+import { completeChat } from '../ai/openai.js';
 
 const app = express();
 app.use(express.json());
@@ -55,20 +56,52 @@ app.post('/discord/interactions', async (req, res) => {
   if (type === 2) { // APPLICATION_COMMAND
     const commandName = data.name;
     
-    if (commandName === 'chat') {
-      const message = data.options?.[0]?.value || 'Hello!';
-      
-      // Send response to Discord
-      const response = {
-        type: 4, // CHANNEL_MESSAGE_WITH_SOURCE
-        data: {
-          content: `🤖 Vox AI: ${message}`,
-          allowed_mentions: { parse: [] }
+      if (commandName === 'chat') {
+        const message = data.options?.[0]?.value || 'Hello!';
+        
+        try {
+          console.log(`🧠 Processing Discord message with AI: ${message}`);
+          
+          const messages = [
+            { 
+              role: 'system', 
+              content: 'You are Vox AI, a helpful and intelligent assistant. You can help with questions, provide information, have conversations, and assist with various topics. Be friendly, informative, and engaging in your responses.' 
+            },
+            { 
+              role: 'user', 
+              content: message 
+            }
+          ];
+          
+          const aiResponse = await completeChat(messages);
+          console.log(`🤖 AI Response: ${aiResponse}`);
+          
+          // Send AI response to Discord
+          const response = {
+            type: 4, // CHANNEL_MESSAGE_WITH_SOURCE
+            data: {
+              content: `🤖 Vox AI: ${aiResponse}`,
+              allowed_mentions: { parse: [] }
+            }
+          };
+          
+          return res.json(response);
+          
+        } catch (error) {
+          console.error('AI processing error:', error);
+          
+          // Fallback response if AI fails
+          const response = {
+            type: 4, // CHANNEL_MESSAGE_WITH_SOURCE
+            data: {
+              content: `🤖 Vox AI: I apologize, but I'm having trouble processing your request right now. Please try again in a moment.`,
+              allowed_mentions: { parse: [] }
+            }
+          };
+          
+          return res.json(response);
         }
-      };
-      
-      return res.json(response);
-    }
+      }
   }
 
   if (type === 3) { // MESSAGE_COMPONENT
