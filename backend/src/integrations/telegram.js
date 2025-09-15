@@ -141,6 +141,35 @@ async function sendMessage(chatId, text, withReactions = false) {
   }
 }
 
+// Function to send reaction to user message
+async function sendReactionToUser(chatId, messageId, emotion) {
+  try {
+    const sticker = getStickerForEmotion(emotion);
+    if (sticker) {
+      // Send a reaction message (Telegram doesn't have native reactions like Discord)
+      const reactionText = `${sticker} *${emotion.charAt(0).toUpperCase() + emotion.slice(1)} detected!*`;
+      
+      const response = await fetch(`${api}/sendMessage`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          chat_id: chatId,
+          text: reactionText,
+          parse_mode: 'HTML',
+          reply_to_message_id: messageId
+        })
+      });
+      
+      const result = await response.json();
+      if (!result.ok) {
+        console.error('Failed to send reaction:', result);
+      }
+    }
+  } catch (error) {
+    console.error('Error sending reaction:', error);
+  }
+}
+
 // Function to get updates from Telegram
 async function getUpdates() {
   try {
@@ -252,11 +281,16 @@ async function getUpdates() {
                   isMentioned = text.includes('@VoxAssistantBot');
                 }
                 
-                console.log(`📱 Is group: ${isGroup}, Is mentioned: ${isMentioned}`);
+                // Check if this is a reply to the bot's message
+                let isReplyToBot = false;
+                if (message.reply_to_message && message.reply_to_message.from) {
+                  isReplyToBot = message.reply_to_message.from.is_bot === true;
+                }
                 
-                // Only process if it's a DM or if the bot is mentioned in a group
-                // For testing: also process all messages in groups temporarily
-                if (!isGroup || isMentioned || true) {
+                console.log(`📱 Is group: ${isGroup}, Is mentioned: ${isMentioned}, Is reply to bot: ${isReplyToBot}`);
+                
+                // Only process if it's a DM, if the bot is mentioned in a group, or if it's a reply to the bot
+                if (!isGroup || isMentioned || isReplyToBot) {
                   // Remove the mention from the text for processing
                   let cleanText = text;
                   if (isMentioned) {
@@ -325,6 +359,12 @@ Special features:
                       // Add AI response to memory
                       addToMemory(message.from.id, 'assistant', aiResponse);
                       
+                      // Detect emotion in user's message and send reaction
+                      const emotion = detectEmotion(cleanText);
+                      if (emotion && emotion !== 'neutral') {
+                        console.log(`😊 Detected emotion: ${emotion} in message: "${cleanText}"`);
+                        await sendReactionToUser(chatId, message.message_id, emotion);
+                      }
                       
                       // Send AI response to user with reactions
                       await sendMessage(chatId, aiResponse, true);
