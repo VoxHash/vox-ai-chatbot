@@ -88,7 +88,7 @@ function generateThreadTitle(message, aiResponse) {
   if (messageText.includes('harry potter') || messageText.includes('hogwarts')) {
     topics.push('Harry Potter');
   }
-  if (messageText.includes('programming') || messageText.includes('code') || messageText.includes('development')) {
+  if (messageText.includes('programming') || messageText.includes('code') || messageText.includes('development') || messageText.includes('php') || messageText.includes('javascript') || messageText.includes('python')) {
     topics.push('Programming');
   }
   if (messageText.includes('ai') || messageText.includes('artificial intelligence')) {
@@ -112,18 +112,55 @@ function generateThreadTitle(message, aiResponse) {
   if (messageText.includes('straw hat') || messageText.includes('one piece')) {
     topics.push('One Piece Discussion');
   }
+  if (messageText.includes('fried chicken') || messageText.includes('food') || messageText.includes('cooking') || messageText.includes('recipe')) {
+    topics.push('Food Discussion');
+  }
+  if (messageText.includes('movie') || messageText.includes('film') || messageText.includes('cinema')) {
+    topics.push('Movie Discussion');
+  }
+  if (messageText.includes('game') || messageText.includes('gaming') || messageText.includes('gta') || messageText.includes('video game')) {
+    topics.push('Gaming Discussion');
+  }
+  if (messageText.includes('music') || messageText.includes('song') || messageText.includes('band')) {
+    topics.push('Music Discussion');
+  }
+  if (messageText.includes('sport') || messageText.includes('football') || messageText.includes('basketball') || messageText.includes('soccer')) {
+    topics.push('Sports Discussion');
+  }
+  if (messageText.includes('travel') || messageText.includes('vacation') || messageText.includes('trip')) {
+    topics.push('Travel Discussion');
+  }
+  if (messageText.includes('book') || messageText.includes('reading') || messageText.includes('novel')) {
+    topics.push('Books Discussion');
+  }
+  if (messageText.includes('science') || messageText.includes('technology') || messageText.includes('tech')) {
+    topics.push('Science & Tech Discussion');
+  }
   
   // If we found specific topics, use them
   if (topics.length > 0) {
     return topics.join(' & ') + ' Discussion';
   }
   
-  // Extract first few words from the message as fallback
-  const words = message.split(' ').slice(0, 4).join(' ');
-  const cleanWords = words.replace(/[^\w\s]/g, '').trim();
+  // Extract first few meaningful words from the message as fallback
+  const words = message.split(' ').filter(word => 
+    word.length > 2 && 
+    !['the', 'and', 'or', 'but', 'in', 'on', 'at', 'to', 'for', 'of', 'with', 'by', 'a', 'an'].includes(word.toLowerCase())
+  ).slice(0, 3);
   
-  if (cleanWords.length > 0) {
-    return cleanWords + ' Discussion';
+  if (words.length > 0) {
+    const cleanWords = words.join(' ').replace(/[^\w\s]/g, '').trim();
+    if (cleanWords.length > 0) {
+      return cleanWords + ' Discussion';
+    }
+  }
+  
+  // Extract first few words from the message as fallback
+  const fallbackWords = message.split(' ').slice(0, 3).join(' ');
+  const cleanFallback = fallbackWords.replace(/[^\w\s]/g, '').trim();
+  
+  if (cleanFallback.length > 0) {
+    return cleanFallback + ' Discussion';
   }
   
   // Final fallback
@@ -460,8 +497,29 @@ Special features:
     // Check if user explicitly wants to create a thread
     if (message.channel.type !== 'DM' && (cleanContent.toLowerCase().includes('create a thread') || cleanContent.toLowerCase().includes('make a thread'))) {
       try {
+        // Extract the actual topic from the message
+        let topic = cleanContent;
+        
+        // Remove common thread creation phrases to get the actual topic
+        topic = topic.replace(/create a thread to talk about/gi, '');
+        topic = topic.replace(/create a thread about/gi, '');
+        topic = topic.replace(/create a thread for/gi, '');
+        topic = topic.replace(/make a thread about/gi, '');
+        topic = topic.replace(/make a thread for/gi, '');
+        topic = topic.replace(/create a thread/gi, '');
+        topic = topic.replace(/make a thread/gi, '');
+        topic = topic.replace(/to talk about/gi, '');
+        topic = topic.replace(/to discuss/gi, '');
+        topic = topic.replace(/for/gi, '');
+        topic = topic.trim();
+        
+        // If no topic extracted, use the original message
+        if (!topic || topic.length < 3) {
+          topic = cleanContent;
+        }
+        
         // Generate personalized thread title
-        const threadTitle = generateThreadTitle(cleanContent, aiResponse);
+        const threadTitle = generateThreadTitle(topic, aiResponse);
         
         const thread = await responseMessage.startThread({
           name: threadTitle,
@@ -470,7 +528,7 @@ Special features:
         });
         
         await thread.send(`🧵 **Thread created for this discussion!**\n\nFeel free to continue the conversation here. I'll be monitoring this thread and can help with follow-up questions!`);
-        console.log(`🧵 Created thread: ${threadTitle} (user requested)`);
+        console.log(`🧵 Created thread: ${threadTitle} (user requested) - Original topic: "${topic}"`);
       } catch (error) {
         console.log('Could not create thread:', error.message);
         await message.reply(`I'm sorry, I couldn't create the thread. Please try again later! 😔`);
