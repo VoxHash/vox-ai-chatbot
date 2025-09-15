@@ -159,7 +159,7 @@ async function getUpdates() {
                   response = `Thanks for your feedback, ${username}!`;
               }
               
-              await sendMessage(chatId, `🤖 Vox AI: ${response}`);
+              await sendMessage(chatId, response);
               
               // Answer the callback query to remove loading state
               await fetch(`${api}/answerCallbackQuery`, {
@@ -181,11 +181,11 @@ async function getUpdates() {
           
           // Process different types of messages
           if (text.startsWith('/start')) {
-            await sendMessage(chatId, `🤖 Hello ${username}! I'm Vox. Send me any message and I'll respond!`);
+            await sendMessage(chatId, `Hello ${username}! I'm Vox AI. Send me any message and I'll respond!`);
           } else if (text.startsWith('/help')) {
-            await sendMessage(chatId, `🤖 Vox AI Commands:\n/start - Start the bot\n/help - Show this help\n/status - Check bot status\n\nJust send me any message to chat!`);
+            await sendMessage(chatId, `Vox AI Commands:\n/start - Start the bot\n/help - Show this help\n/status - Check bot status\n\nJust send me any message to chat!`);
           } else if (text.startsWith('/status')) {
-            await sendMessage(chatId, `🤖 Vox AI is online and ready! ✅\n\nI can help you with:\n• General questions\n• Information requests\n• Casual conversation\n• Remember our previous conversations\n• React to your emotions\n\nTry asking me anything!`);
+            await sendMessage(chatId, `Vox AI is online and ready! ✅\n\nI can help you with:\n• General questions\n• Information requests\n• Casual conversation\n• Remember our previous conversations\n• React to your emotions\n\nTry asking me anything!`);
           } else if (text.trim()) {
             // Add user message to memory
             addToMemory(message.from.id, 'user', text);
@@ -229,12 +229,12 @@ Special features:
               addToMemory(message.from.id, 'assistant', aiResponse);
               
               // Send AI response to user with reactions
-              await sendMessage(chatId, `🤖 Vox AI: ${aiResponse}`, true);
+              await sendMessage(chatId, aiResponse, true);
               
             } catch (error) {
               console.error('AI processing error:', error);
               // Fallback response if AI fails
-              await sendMessage(chatId, `🤖 Vox AI: I apologize, but I'm having trouble processing your request right now. Please try again in a moment.`);
+              await sendMessage(chatId, `I apologize, but I'm having trouble processing your request right now. Please try again in a moment.`);
             }
           }
         }

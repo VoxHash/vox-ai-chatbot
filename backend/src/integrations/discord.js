@@ -76,6 +76,54 @@ function getStickerForEmotion(emotion) {
   return stickers[emotion] || '👍';
 }
 
+// Helper function to generate personalized thread title
+function generateThreadTitle(message, aiResponse) {
+  const messageText = message.toLowerCase();
+  const responseText = aiResponse.toLowerCase();
+  
+  // Extract key topics from the message
+  const topics = [];
+  
+  // Check for specific topics
+  if (messageText.includes('harry potter') || messageText.includes('hogwarts')) {
+    topics.push('Harry Potter');
+  }
+  if (messageText.includes('programming') || messageText.includes('code') || messageText.includes('development')) {
+    topics.push('Programming');
+  }
+  if (messageText.includes('ai') || messageText.includes('artificial intelligence')) {
+    topics.push('AI Discussion');
+  }
+  if (messageText.includes('discord') || messageText.includes('bot')) {
+    topics.push('Discord Bot');
+  }
+  if (messageText.includes('help') || messageText.includes('question')) {
+    topics.push('Q&A');
+  }
+  if (messageText.includes('project') || messageText.includes('planning')) {
+    topics.push('Project Discussion');
+  }
+  if (messageText.includes('tutorial') || messageText.includes('guide')) {
+    topics.push('Tutorial');
+  }
+  
+  // If we found specific topics, use them
+  if (topics.length > 0) {
+    return topics.join(' & ') + ' Discussion';
+  }
+  
+  // Extract first few words from the message as fallback
+  const words = message.split(' ').slice(0, 4).join(' ');
+  const cleanWords = words.replace(/[^\w\s]/g, '').trim();
+  
+  if (cleanWords.length > 0) {
+    return cleanWords + ' Discussion';
+  }
+  
+  // Final fallback
+  return 'General Discussion';
+}
+
 // Create Discord client with all necessary intents (now enabled!)
 const client = new Client({
   intents: [
@@ -213,7 +261,7 @@ You have access to conversation history to provide better context-aware response
       addToMemory(userId, 'assistant', aiResponse);
       
       // Send AI response to Discord
-      const responseMessage = await interaction.editReply(`🤖 Vox AI: ${aiResponse}`);
+      const responseMessage = await interaction.editReply(aiResponse);
       
       // Create thread if this seems like a complex discussion
       if (interaction.channel.type !== 'DM' && shouldCreateThread(message, aiResponse, message)) {
@@ -236,7 +284,7 @@ You have access to conversation history to provide better context-aware response
       console.error('AI processing error:', error);
       
       // Fallback response if AI fails
-      await interaction.editReply(`🤖 Vox AI: I apologize, but I'm having trouble processing your request right now. Please try again in a moment.`);
+      await interaction.editReply(`I apologize, but I'm having trouble processing your request right now. Please try again in a moment.`);
     }
   }
 });
@@ -280,19 +328,19 @@ client.on(Events.MessageCreate, async message => {
         try {
           // Try to change the user's nickname
           await message.member.setNickname(newNickname);
-          await message.reply(`🤖 Vox AI: Great! I've changed your nickname to "${newNickname}"! 🎉`);
+          await message.reply(`Great! I've changed your nickname to "${newNickname}"! 🎉`);
           console.log(`📝 Changed nickname for ${message.author.username} to ${newNickname}`);
           return;
         } catch (error) {
           console.log('Could not change nickname:', error.message);
-          await message.reply(`🤖 Vox AI: I'm sorry, I don't have permission to change your nickname. Please ask an admin to help you! 😔`);
+          await message.reply(`I'm sorry, I don't have permission to change your nickname. Please ask an admin to help you! 😔`);
           return;
         }
       } else if (message.guild) {
-        await message.reply(`🤖 Vox AI: I'd be happy to help you change your nickname! Please tell me what you'd like your new nickname to be. For example: "change my nickname to John" or "call me Alex"! 😊`);
+        await message.reply(`I'd be happy to help you change your nickname! Please tell me what you'd like your new nickname to be. For example: "change my nickname to John" or "call me Alex"! 😊`);
         return;
       } else {
-        await message.reply(`🤖 Vox AI: I can only change nicknames in servers, not in DMs. Please ask me in a server channel! 😊`);
+        await message.reply(`I can only change nicknames in servers, not in DMs. Please ask me in a server channel! 😊`);
         return;
       }
     }
@@ -334,8 +382,8 @@ Special features:
     // Add AI response to memory
     addToMemory(userId, 'assistant', aiResponse);
     
-    // Send AI response to Discord
-    const responseMessage = await message.reply(`🤖 Vox AI: ${aiResponse}`);
+      // Send AI response to Discord
+      const responseMessage = await message.reply(aiResponse);
     
     // Add emotion-based reaction to user's message
     try {
@@ -351,7 +399,7 @@ Special features:
     if (message.channel.type !== 'DM' && shouldCreateThread(cleanContent, aiResponse, cleanContent)) {
       try {
         // Ask user if they want a thread instead of creating it automatically
-        const threadQuestion = await message.channel.send(`🤖 Vox AI: This seems like a complex topic that might benefit from a dedicated thread for better organization. Would you like me to create a thread for this discussion? Just reply with "yes" or "no"! 🧵`);
+        const threadQuestion = await message.channel.send(`This seems like a complex topic that might benefit from a dedicated thread for better organization. Would you like me to create a thread for this discussion? Just reply with "yes" or "no"! 🧵`);
         
         // Add reactions to the question for easy response
         await threadQuestion.react('✅'); // Yes
@@ -366,8 +414,8 @@ Special features:
   } catch (error) {
     console.error('AI processing error:', error);
     
-    // Fallback response if AI fails
-    await message.reply(`🤖 Vox AI: I apologize, but I'm having trouble processing your request right now. Please try again in a moment.`);
+      // Fallback response if AI fails
+      await message.reply(`I apologize, but I'm having trouble processing your request right now. Please try again in a moment.`);
   }
 });
 
@@ -384,21 +432,27 @@ client.on(Events.MessageReactionAdd, async (reaction, user) => {
     if (reaction.message.author.id === client.user.id && reaction.message.content.includes('create a thread')) {
       if (emoji === '✅') {
         try {
-          const threadName = `vox-discussion-${Date.now()}`;
+          // Get the original message that triggered the thread question
+          const originalMessage = reaction.message.reference?.resolved || reaction.message;
+          const messageContent = originalMessage.content || '';
+          
+          // Generate personalized thread title
+          const threadTitle = generateThreadTitle(messageContent, '');
+          
           const thread = await reaction.message.startThread({
-            name: threadName,
+            name: threadTitle,
             autoArchiveDuration: 60, // 1 hour
             reason: 'User requested thread creation'
           });
           
           await thread.send(`🧵 **Thread created for this discussion!**\n\nFeel free to continue the conversation here. I'll be monitoring this thread and can help with follow-up questions!`);
-          console.log(`🧵 Created thread: ${threadName} (user requested)`);
+          console.log(`🧵 Created thread: ${threadTitle} (user requested)`);
         } catch (error) {
           console.log('Could not create thread:', error.message);
-          await reaction.message.channel.send(`🤖 Vox AI: I'm sorry, I couldn't create the thread. Please try again later! 😔`);
+          await reaction.message.channel.send(`I'm sorry, I couldn't create the thread. Please try again later! 😔`);
         }
       } else if (emoji === '❌') {
-        await reaction.message.channel.send(`🤖 Vox AI: No problem! We'll continue the conversation here. Feel free to ask me anything! 😊`);
+        await reaction.message.channel.send(`No problem! We'll continue the conversation here. Feel free to ask me anything! 😊`);
       }
       return;
     }
@@ -449,7 +503,7 @@ client.on(Events.MessageReactionAdd, async (reaction, user) => {
       }
       
       // Send personalized response
-      await reaction.message.channel.send(`🤖 Vox AI: ${response}`);
+      await reaction.message.channel.send(response);
       return;
     }
     
@@ -484,7 +538,7 @@ client.on(Events.MessageReactionAdd, async (reaction, user) => {
       }
       
       // Send response in the same channel
-      await reaction.message.channel.send(`🤖 Vox AI: ${response}`);
+      await reaction.message.channel.send(response);
     }
     
   } catch (error) {
