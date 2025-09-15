@@ -326,6 +326,8 @@ async function getUpdates() {
               const username = message.from.username || message.from.first_name || 'User';
 
               console.log(`📱 Received message from ${username}: ${text}`);
+              console.log(`📱 Chat type: ${message.chat.type}, Chat ID: ${chatId}`);
+              console.log(`📱 Message entities:`, message.entities);
               
               // Handle new member joins (for groups)
               if (message.new_chat_members && message.new_chat_members.length > 0) {
@@ -349,17 +351,31 @@ async function getUpdates() {
               } else if (text.trim()) {
                 // Check if this is a group message and if the bot is mentioned
                 const isGroup = message.chat.type === 'group' || message.chat.type === 'supergroup';
-                const isMentioned = message.entities && message.entities.some(entity => 
-                  entity.type === 'mention' && text.includes('@VoxAssistantBot')
-                );
+                
+                // Check for mention in multiple ways
+                let isMentioned = false;
+                if (message.entities) {
+                  isMentioned = message.entities.some(entity => 
+                    entity.type === 'mention' && text.includes('@VoxAssistantBot')
+                  );
+                }
+                // Also check if text contains the mention directly
+                if (!isMentioned) {
+                  isMentioned = text.includes('@VoxAssistantBot');
+                }
+                
+                console.log(`📱 Is group: ${isGroup}, Is mentioned: ${isMentioned}`);
                 
                 // Only process if it's a DM or if the bot is mentioned in a group
-                if (!isGroup || isMentioned) {
+                // For testing: also process all messages in groups temporarily
+                if (!isGroup || isMentioned || true) {
                   // Remove the mention from the text for processing
                   let cleanText = text;
                   if (isMentioned) {
                     cleanText = text.replace(/@VoxAssistantBot\s*/g, '').trim();
                   }
+                  
+                  console.log(`📱 Processing message: "${cleanText}"`);
                   
                   if (cleanText) {
                     // Add user message to memory
