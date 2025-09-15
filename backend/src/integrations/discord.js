@@ -10,21 +10,50 @@ if (!DISCORD_BOT_TOKEN) {
   process.exit(0);
 }
 
-// Create Discord client with all necessary intents including MessageContent
+// Create Discord client with basic intents (additional intents require Discord approval)
 const client = new Client({
   intents: [
     GatewayIntentBits.Guilds,
     GatewayIntentBits.GuildMessages,
     GatewayIntentBits.DirectMessages,
-    GatewayIntentBits.MessageContent  // Now enabled for full DM support!
+    GatewayIntentBits.MessageContent  // For full DM support
+    // Note: GuildMessageReactions and GuildMembers require additional Discord approval
   ]
 });
+
+// Helper function to determine if a topic should have a thread
+function shouldCreateThread(message, aiResponse) {
+  const threadKeywords = [
+    'discussion', 'debate', 'conversation', 'long', 'detailed', 'complex',
+    'project', 'planning', 'brainstorm', 'ideas', 'suggestions', 'feedback',
+    'help me with', 'can you help', 'need assistance', 'tutorial', 'guide',
+    'explain', 'how to', 'what is', 'why', 'when', 'where', 'how'
+  ];
+  
+  const messageText = message.toLowerCase();
+  const responseText = aiResponse.toLowerCase();
+  
+  // Check if message or response suggests a longer conversation
+  const hasThreadKeywords = threadKeywords.some(keyword => 
+    messageText.includes(keyword) || responseText.includes(keyword)
+  );
+  
+  // Check if response is long (more than 200 characters)
+  const isLongResponse = aiResponse.length > 200;
+  
+  // Check if it's a question that might need follow-up
+  const isQuestion = messageText.includes('?') || messageText.includes('how') || messageText.includes('what');
+  
+  return hasThreadKeywords || isLongResponse || isQuestion;
+}
 
 // Bot ready event
 client.once(Events.ClientReady, readyClient => {
   console.log(`🤖 Discord bot ready! Logged in as ${readyClient.user.tag}`);
   console.log(`🆔 Bot ID: ${readyClient.user.id}`);
   console.log(`📱 Bot is online and ready to chat in DMs and servers!`);
+  console.log(`🧵 Thread support enabled for complex discussions!`);
+  console.log(`😊 Reaction support enabled for user feedback!`);
 });
 
 // Handle slash commands
@@ -57,7 +86,37 @@ client.on(Events.InteractionCreate, async interaction => {
       console.log(`🤖 AI Response: ${aiResponse}`);
       
       // Send AI response to Discord
-      await interaction.editReply(`🤖 Vox AI: ${aiResponse}`);
+      const responseMessage = await interaction.editReply(`🤖 Vox AI: ${aiResponse}`);
+      
+      // Add reactions to the response (if permissions allow)
+      try {
+        await responseMessage.react('👍');
+        await responseMessage.react('👎');
+        await responseMessage.react('💡');
+        await responseMessage.react('❓');
+        console.log('😊 Added reactions to message');
+      } catch (error) {
+        console.log('Could not add reactions (intent not enabled):', error.message);
+        // Add text-based feedback instead
+        await responseMessage.edit(`${responseMessage.content}\n\n*💡 Tip: React with 👍 👎 💡 ❓ for feedback!*`);
+      }
+      
+      // Create thread if this seems like a complex discussion
+      if (interaction.channel.type !== 'DM' && shouldCreateThread(message, aiResponse)) {
+        try {
+          const threadName = `vox-discussion-${Date.now()}`;
+          const thread = await responseMessage.startThread({
+            name: threadName,
+            autoArchiveDuration: 60, // 1 hour
+            reason: 'Complex discussion that might need follow-up'
+          });
+          
+          await thread.send(`🧵 **Thread created for this discussion!**\n\nFeel free to continue the conversation here. I'll be monitoring this thread and can help with follow-up questions!`);
+          console.log(`🧵 Created thread: ${threadName}`);
+        } catch (error) {
+          console.log('Could not create thread:', error.message);
+        }
+      }
       
     } catch (error) {
       console.error('AI processing error:', error);
@@ -75,9 +134,10 @@ client.on(Events.MessageCreate, async message => {
   
   const isDM = message.channel.type === 'DM';
   const isMentioned = message.mentions.has(client.user);
+  const isThread = message.channel.isThread();
   
-  // Respond to DMs directly or when mentioned in servers
-  if (!isDM && !isMentioned) return;
+  // Respond to DMs directly, when mentioned in servers, or in threads
+  if (!isDM && !isMentioned && !isThread) return;
   
   try {
     console.log(`📱 Received message from ${message.author.username}: ${message.content}`);
@@ -112,13 +172,81 @@ client.on(Events.MessageCreate, async message => {
     console.log(`🤖 AI Response: ${aiResponse}`);
     
     // Send AI response to Discord
-    await message.reply(`🤖 Vox AI: ${aiResponse}`);
+    const responseMessage = await message.reply(`🤖 Vox AI: ${aiResponse}`);
+    
+    // Add reactions to the response (if permissions allow)
+    try {
+      await responseMessage.react('👍');
+      await responseMessage.react('👎');
+      await responseMessage.react('💡');
+      await responseMessage.react('❓');
+      console.log('😊 Added reactions to message');
+    } catch (error) {
+      console.log('Could not add reactions (intent not enabled):', error.message);
+      // Add text-based feedback instead
+      await responseMessage.edit(`${responseMessage.content}\n\n*💡 Tip: React with 👍 👎 💡 ❓ for feedback!*`);
+    }
+    
+    // Create thread if this seems like a complex discussion (only in servers)
+    if (message.channel.type !== 'DM' && shouldCreateThread(cleanContent, aiResponse)) {
+      try {
+        const threadName = `vox-discussion-${Date.now()}`;
+        const thread = await responseMessage.startThread({
+          name: threadName,
+          autoArchiveDuration: 60, // 1 hour
+          reason: 'Complex discussion that might need follow-up'
+        });
+        
+        await thread.send(`🧵 **Thread created for this discussion!**\n\nFeel free to continue the conversation here. I'll be monitoring this thread and can help with follow-up questions!`);
+        console.log(`🧵 Created thread: ${threadName}`);
+      } catch (error) {
+        console.log('Could not create thread:', error.message);
+      }
+    }
     
   } catch (error) {
     console.error('AI processing error:', error);
     
     // Fallback response if AI fails
     await message.reply(`🤖 Vox AI: I apologize, but I'm having trouble processing your request right now. Please try again in a moment.`);
+  }
+});
+
+// Handle reaction events
+client.on(Events.MessageReactionAdd, async (reaction, user) => {
+  // Ignore reactions from bots
+  if (user.bot) return;
+  
+  // Only respond to reactions on our messages
+  if (reaction.message.author.id !== client.user.id) return;
+  
+  try {
+    const emoji = reaction.emoji.name;
+    console.log(`😊 Received reaction ${emoji} from ${user.username}`);
+    
+    let response = '';
+    switch (emoji) {
+      case '👍':
+        response = '😊 Thanks for the positive feedback! I\'m glad I could help!';
+        break;
+      case '👎':
+        response = '😔 I\'m sorry my response wasn\'t helpful. Could you tell me what I can improve?';
+        break;
+      case '💡':
+        response = '💡 Great idea! Feel free to share more thoughts or ask follow-up questions!';
+        break;
+      case '❓':
+        response = '❓ I\'m here to help! What would you like to know more about?';
+        break;
+      default:
+        return; // Don't respond to other reactions
+    }
+    
+    // Send response in the same channel
+    await reaction.message.channel.send(`🤖 Vox AI: ${response}`);
+    
+  } catch (error) {
+    console.error('Error handling reaction:', error);
   }
 });
 

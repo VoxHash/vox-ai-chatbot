@@ -17,16 +17,30 @@ const api = `https://api.telegram.org/bot${token}`;
 let lastUpdateId = 0;
 
 // Function to send message to Telegram
-async function sendMessage(chatId, text) {
+async function sendMessage(chatId, text, withReactions = false) {
   try {
+    const messageData = { 
+      chat_id: chatId, 
+      text: text,
+      parse_mode: 'HTML'
+    };
+    
+    // Add inline keyboard for reactions if requested
+    if (withReactions) {
+      messageData.reply_markup = {
+        inline_keyboard: [[
+          { text: '👍 Like', callback_data: 'reaction_like' },
+          { text: '👎 Dislike', callback_data: 'reaction_dislike' },
+          { text: '💡 Idea', callback_data: 'reaction_idea' },
+          { text: '❓ Question', callback_data: 'reaction_question' }
+        ]]
+      };
+    }
+    
     const response = await fetch(`${api}/sendMessage`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ 
-        chat_id: chatId, 
-        text: text,
-        parse_mode: 'HTML'
-      })
+      body: JSON.stringify(messageData)
     });
     
     if (!response.ok) {
@@ -43,11 +57,50 @@ async function getUpdates() {
     const response = await fetch(`${api}/getUpdates?offset=${lastUpdateId + 1}&timeout=30`);
     const data = await response.json();
     
-    if (data.ok && data.result.length > 0) {
-      for (const update of data.result) {
-        lastUpdateId = update.update_id;
-        
-        if (update.message) {
+        if (data.ok && data.result.length > 0) {
+          for (const update of data.result) {
+            lastUpdateId = update.update_id;
+
+            // Handle callback queries (button presses)
+            if (update.callback_query) {
+              const callbackQuery = update.callback_query;
+              const chatId = callbackQuery.message.chat.id;
+              const data = callbackQuery.data;
+              const username = callbackQuery.from.username || callbackQuery.from.first_name || 'User';
+              
+              console.log(`😊 Received callback from ${username}: ${data}`);
+              
+              let response = '';
+              switch (data) {
+                case 'reaction_like':
+                  response = '😊 Thanks for the positive feedback! I\'m glad I could help!';
+                  break;
+                case 'reaction_dislike':
+                  response = '😔 I\'m sorry my response wasn\'t helpful. Could you tell me what I can improve?';
+                  break;
+                case 'reaction_idea':
+                  response = '💡 Great idea! Feel free to share more thoughts or ask follow-up questions!';
+                  break;
+                case 'reaction_question':
+                  response = '❓ I\'m here to help! What would you like to know more about?';
+                  break;
+                default:
+                  response = 'Thanks for your feedback!';
+              }
+              
+              await sendMessage(chatId, `🤖 Vox AI: ${response}`);
+              
+              // Answer the callback query to remove loading state
+              await fetch(`${api}/answerCallbackQuery`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ callback_query_id: callbackQuery.id })
+              });
+              
+              continue;
+            }
+
+            if (update.message) {
           const message = update.message;
           const chatId = message.chat.id;
           const text = message.text || '';
@@ -81,8 +134,8 @@ async function getUpdates() {
               const aiResponse = await completeChat(messages);
               console.log(`${aiResponse}`);
               
-              // Send AI response to user
-              await sendMessage(chatId, `${aiResponse}`);
+              // Send AI response to user with reactions
+              await sendMessage(chatId, `🤖 Vox AI: ${aiResponse}`, true);
               
             } catch (error) {
               console.error('AI processing error:', error);
