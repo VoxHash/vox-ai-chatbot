@@ -10,13 +10,13 @@ if (!DISCORD_BOT_TOKEN) {
   process.exit(0);
 }
 
-// Create Discord client with basic intents (MessageContent requires special approval)
+// Create Discord client with all necessary intents including MessageContent
 const client = new Client({
   intents: [
     GatewayIntentBits.Guilds,
     GatewayIntentBits.GuildMessages,
-    GatewayIntentBits.DirectMessages
-    // MessageContent intent disabled - requires Discord approval
+    GatewayIntentBits.DirectMessages,
+    GatewayIntentBits.MessageContent  // Now enabled for full DM support!
   ]
 });
 
@@ -68,35 +68,51 @@ client.on(Events.InteractionCreate, async interaction => {
   }
 });
 
-// Handle mentions only (MessageContent intent not available)
+// Handle direct messages and mentions (now with full MessageContent support!)
 client.on(Events.MessageCreate, async message => {
   // Ignore messages from bots (including ourselves)
   if (message.author.bot) return;
   
-  // Only respond when bot is mentioned (works without MessageContent intent)
+  const isDM = message.channel.type === 'DM';
   const isMentioned = message.mentions.has(client.user);
   
-  if (!isMentioned) return;
+  // Respond to DMs directly or when mentioned in servers
+  if (!isDM && !isMentioned) return;
   
   try {
-    console.log(`📱 Received mention from ${message.author.username}`);
-    console.log(`📍 Channel: ${message.channel.type === 'DM' ? 'DM' : message.channel.name}`);
+    console.log(`📱 Received message from ${message.author.username}: ${message.content}`);
+    console.log(`📍 Channel: ${isDM ? 'DM' : message.channel.name}`);
     
     // Show typing indicator
     await message.channel.sendTyping();
     
-    // Since we can't read message content without MessageContent intent,
-    // we'll respond with a helpful message about using slash commands
-    const response = `🤖 Vox AI: Hello! I can see you mentioned me, but I need the Message Content Intent to read your full message. 
-
-**Please use slash commands instead:**
-\`/chat message:Your question here\`
-
-**Or enable Message Content Intent in Discord Developer Portal for full DM support!**
-
-I'm here to help with any questions you have! 🚀`;
-
-    await message.reply(response);
+    // Clean the message content (remove mentions if present)
+    let cleanContent = message.content;
+    if (isMentioned) {
+      cleanContent = message.content.replace(/<@!?\d+>/g, '').trim();
+    }
+    
+    // If no content after cleaning, use a default
+    if (!cleanContent) {
+      cleanContent = 'Hello!';
+    }
+    
+    const messages = [
+      { 
+        role: 'system', 
+        content: 'You are Vox AI, a helpful and intelligent assistant. You can help with questions, provide information, have conversations, and assist with various topics. Be friendly, informative, and engaging in your responses.' 
+      },
+      { 
+        role: 'user', 
+        content: cleanContent 
+      }
+    ];
+    
+    const aiResponse = await completeChat(messages);
+    console.log(`🤖 AI Response: ${aiResponse}`);
+    
+    // Send AI response to Discord
+    await message.reply(`🤖 Vox AI: ${aiResponse}`);
     
   } catch (error) {
     console.error('AI processing error:', error);
