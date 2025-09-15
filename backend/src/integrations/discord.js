@@ -10,6 +10,72 @@ if (!DISCORD_BOT_TOKEN) {
   process.exit(0);
 }
 
+// Memory system for conversation context
+const conversationMemory = new Map();
+const MAX_MEMORY_SIZE = 10; // Keep last 10 messages per user
+
+// Helper function to get conversation history
+function getConversationHistory(userId) {
+  return conversationMemory.get(userId) || [];
+}
+
+// Helper function to add message to memory
+function addToMemory(userId, role, content) {
+  if (!conversationMemory.has(userId)) {
+    conversationMemory.set(userId, []);
+  }
+  
+  const history = conversationMemory.get(userId);
+  history.push({ role, content, timestamp: Date.now() });
+  
+  // Keep only last MAX_MEMORY_SIZE messages
+  if (history.length > MAX_MEMORY_SIZE) {
+    history.splice(0, history.length - MAX_MEMORY_SIZE);
+  }
+  
+  conversationMemory.set(userId, history);
+}
+
+// Helper function to detect emotions in user messages
+function detectEmotion(text) {
+  const lowerText = text.toLowerCase();
+  
+  if (lowerText.includes('😊') || lowerText.includes(':)') || lowerText.includes('happy') || lowerText.includes('great') || lowerText.includes('awesome') || lowerText.includes('thanks') || lowerText.includes('thank you')) {
+    return 'happy';
+  }
+  if (lowerText.includes('😢') || lowerText.includes(':(') || lowerText.includes('sad') || lowerText.includes('upset') || lowerText.includes('disappointed')) {
+    return 'sad';
+  }
+  if (lowerText.includes('😡') || lowerText.includes('angry') || lowerText.includes('mad') || lowerText.includes('frustrated')) {
+    return 'angry';
+  }
+  if (lowerText.includes('😮') || lowerText.includes('wow') || lowerText.includes('amazing') || lowerText.includes('incredible')) {
+    return 'surprised';
+  }
+  if (lowerText.includes('🤔') || lowerText.includes('hmm') || lowerText.includes('confused') || lowerText.includes('?') || lowerText.includes('help')) {
+    return 'confused';
+  }
+  if (lowerText.includes('❤️') || lowerText.includes('love') || lowerText.includes('heart')) {
+    return 'love';
+  }
+  
+  return 'neutral';
+}
+
+// Helper function to get appropriate sticker for emotion
+function getStickerForEmotion(emotion) {
+  const stickers = {
+    'happy': '😊',
+    'sad': '😢',
+    'angry': '😡',
+    'surprised': '😮',
+    'confused': '🤔',
+    'love': '❤️',
+    'neutral': '👍'
+  };
+  return stickers[emotion] || '👍';
+}
+
 // Create Discord client with all necessary intents (now enabled!)
 const client = new Client({
   intents: [
@@ -23,29 +89,35 @@ const client = new Client({
 });
 
 // Helper function to determine if a topic should have a thread
-function shouldCreateThread(message, aiResponse) {
-  const threadKeywords = [
-    'discussion', 'debate', 'conversation', 'long', 'detailed', 'complex',
-    'project', 'planning', 'brainstorm', 'ideas', 'suggestions', 'feedback',
-    'help me with', 'can you help', 'need assistance', 'tutorial', 'guide',
-    'explain', 'how to', 'what is', 'why', 'when', 'where', 'how'
-  ];
-  
+function shouldCreateThread(message, aiResponse, userMessage) {
   const messageText = message.toLowerCase();
   const responseText = aiResponse.toLowerCase();
   
-  // Check if message or response suggests a longer conversation
-  const hasThreadKeywords = threadKeywords.some(keyword => 
+  // Check if user explicitly wants to continue the topic
+  const continueKeywords = [
+    'continue', 'keep going', 'more details', 'elaborate', 'explain more',
+    'tell me more', 'go on', 'continue this', 'keep discussing'
+  ];
+  
+  const wantsToContinue = continueKeywords.some(keyword => 
+    messageText.includes(keyword) || userMessage.toLowerCase().includes(keyword)
+  );
+  
+  // Check if response is very long (more than 300 characters)
+  const isVeryLongResponse = aiResponse.length > 300;
+  
+  // Check if it's a complex topic that might need follow-up
+  const complexKeywords = [
+    'tutorial', 'guide', 'step by step', 'how to', 'explain in detail',
+    'project', 'planning', 'brainstorm', 'discussion', 'debate'
+  ];
+  
+  const isComplexTopic = complexKeywords.some(keyword => 
     messageText.includes(keyword) || responseText.includes(keyword)
   );
   
-  // Check if response is long (more than 200 characters)
-  const isLongResponse = aiResponse.length > 200;
-  
-  // Check if it's a question that might need follow-up
-  const isQuestion = messageText.includes('?') || messageText.includes('how') || messageText.includes('what');
-  
-  return hasThreadKeywords || isLongResponse || isQuestion;
+  // Only create thread if user wants to continue OR topic is very long/complex
+  return wantsToContinue || (isVeryLongResponse && isComplexTopic);
 }
 
 // Bot ready event
@@ -63,47 +135,53 @@ client.on(Events.InteractionCreate, async interaction => {
 
   if (interaction.commandName === 'chat') {
     const message = interaction.options.getString('message') || 'Hello!';
+    const userId = interaction.user.id;
     
     try {
       console.log(`🧠 Processing Discord message with AI: ${message}`);
       console.log(`📍 Channel: ${interaction.channel.type === 'DM' ? 'DM' : interaction.channel.name}`);
       console.log(`👤 User: ${interaction.user.username}`);
       
+      // Add user message to memory
+      addToMemory(userId, 'user', message);
+      
       // Show typing indicator
       await interaction.deferReply();
       
+      // Get conversation history
+      const history = getConversationHistory(userId);
+      
+      // Build messages with memory
       const messages = [
         { 
           role: 'system', 
-          content: 'You are Vox AI, a helpful and intelligent assistant. You can help with questions, provide information, have conversations, and assist with various topics. Be friendly, informative, and engaging in your responses.' 
-        },
-        { 
-          role: 'user', 
-          content: message 
+          content: `You are Vox AI, a helpful and intelligent assistant created by VoxHash. You can help with questions, provide information, have conversations, and assist with various topics. Be friendly, informative, and engaging in your responses.
+
+If someone asks about your creator, mention that you were created by VoxHash and direct them to https://voxhash.dev or https://github.com/VoxHash for more information.
+
+You have access to conversation history to provide better context-aware responses.` 
         }
       ];
+      
+      // Add conversation history
+      history.forEach(msg => {
+        messages.push({ role: msg.role, content: msg.content });
+      });
+      
+      // Add current message
+      messages.push({ role: 'user', content: message });
       
       const aiResponse = await completeChat(messages);
       console.log(`🤖 AI Response: ${aiResponse}`);
       
+      // Add AI response to memory
+      addToMemory(userId, 'assistant', aiResponse);
+      
       // Send AI response to Discord
       const responseMessage = await interaction.editReply(`🤖 Vox AI: ${aiResponse}`);
       
-      // Add reactions to the response (if permissions allow)
-      try {
-        await responseMessage.react('👍');
-        await responseMessage.react('👎');
-        await responseMessage.react('💡');
-        await responseMessage.react('❓');
-        console.log('😊 Added reactions to message');
-      } catch (error) {
-        console.log('Could not add reactions (intent not enabled):', error.message);
-        // Add text-based feedback instead
-        await responseMessage.edit(`${responseMessage.content}\n\n*💡 Tip: React with 👍 👎 💡 ❓ for feedback!*`);
-      }
-      
       // Create thread if this seems like a complex discussion
-      if (interaction.channel.type !== 'DM' && shouldCreateThread(message, aiResponse)) {
+      if (interaction.channel.type !== 'DM' && shouldCreateThread(message, aiResponse, message)) {
         try {
           const threadName = `vox-discussion-${Date.now()}`;
           const thread = await responseMessage.startThread({
@@ -136,6 +214,7 @@ client.on(Events.MessageCreate, async message => {
   const isDM = message.channel.type === 'DM';
   const isMentioned = message.mentions.has(client.user);
   const isThread = message.channel.isThread();
+  const userId = message.author.id;
   
   // Respond to DMs directly, when mentioned in servers, or in threads
   if (!isDM && !isMentioned && !isThread) return;
@@ -158,38 +237,58 @@ client.on(Events.MessageCreate, async message => {
       cleanContent = 'Hello!';
     }
     
+    // Add user message to memory
+    addToMemory(userId, 'user', cleanContent);
+    
+    // Get conversation history
+    const history = getConversationHistory(userId);
+    
+    // Build messages with memory
     const messages = [
       { 
         role: 'system', 
-        content: 'You are Vox AI, a helpful and intelligent assistant. You can help with questions, provide information, have conversations, and assist with various topics. Be friendly, informative, and engaging in your responses.' 
-      },
-      { 
-        role: 'user', 
-        content: cleanContent 
+        content: `You are Vox AI, a helpful and intelligent assistant created by VoxHash. You can help with questions, provide information, have conversations, and assist with various topics. Be friendly, informative, and engaging in your responses.
+
+If someone asks about your creator, mention that you were created by VoxHash and direct them to https://voxhash.dev or https://github.com/VoxHash for more information.
+
+You have access to conversation history to provide better context-aware responses.
+
+Special features:
+- You can help users change their username on the server
+- You can recognize and mention admins by name
+- You remember previous conversations for better context` 
       }
     ];
+    
+    // Add conversation history
+    history.forEach(msg => {
+      messages.push({ role: msg.role, content: msg.content });
+    });
+    
+    // Add current message
+    messages.push({ role: 'user', content: cleanContent });
     
     const aiResponse = await completeChat(messages);
     console.log(`🤖 AI Response: ${aiResponse}`);
     
+    // Add AI response to memory
+    addToMemory(userId, 'assistant', aiResponse);
+    
     // Send AI response to Discord
     const responseMessage = await message.reply(`🤖 Vox AI: ${aiResponse}`);
     
-    // Add reactions to the response (if permissions allow)
+    // Add emotion-based reaction to user's message
     try {
-      await responseMessage.react('👍');
-      await responseMessage.react('👎');
-      await responseMessage.react('💡');
-      await responseMessage.react('❓');
-      console.log('😊 Added reactions to message');
+      const emotion = detectEmotion(cleanContent);
+      const sticker = getStickerForEmotion(emotion);
+      await message.react(sticker);
+      console.log(`😊 Added emotion reaction: ${sticker}`);
     } catch (error) {
-      console.log('Could not add reactions (intent not enabled):', error.message);
-      // Add text-based feedback instead
-      await responseMessage.edit(`${responseMessage.content}\n\n*💡 Tip: React with 👍 👎 💡 ❓ for feedback!*`);
+      console.log('Could not add emotion reaction:', error.message);
     }
     
     // Create thread if this seems like a complex discussion (only in servers)
-    if (message.channel.type !== 'DM' && shouldCreateThread(cleanContent, aiResponse)) {
+    if (message.channel.type !== 'DM' && shouldCreateThread(cleanContent, aiResponse, cleanContent)) {
       try {
         const threadName = `vox-discussion-${Date.now()}`;
         const thread = await responseMessage.startThread({
@@ -213,38 +312,51 @@ client.on(Events.MessageCreate, async message => {
   }
 });
 
-// Handle reaction events
+// Handle reaction events (now only for user message reactions)
 client.on(Events.MessageReactionAdd, async (reaction, user) => {
   // Ignore reactions from bots
   if (user.bot) return;
   
-  // Only respond to reactions on our messages
-  if (reaction.message.author.id !== client.user.id) return;
+  // Only respond to reactions on user messages (not our own)
+  if (reaction.message.author.id === client.user.id) return;
   
   try {
     const emoji = reaction.emoji.name;
-    console.log(`😊 Received reaction ${emoji} from ${user.username}`);
+    console.log(`😊 Received reaction ${emoji} from ${user.username} on user message`);
     
-    let response = '';
-    switch (emoji) {
-      case '👍':
-        response = '😊 Thanks for the positive feedback! I\'m glad I could help!';
-        break;
-      case '👎':
-        response = '😔 I\'m sorry my response wasn\'t helpful. Could you tell me what I can improve?';
-        break;
-      case '💡':
-        response = '💡 Great idea! Feel free to share more thoughts or ask follow-up questions!';
-        break;
-      case '❓':
-        response = '❓ I\'m here to help! What would you like to know more about?';
-        break;
-      default:
-        return; // Don't respond to other reactions
+    // Only respond to our emotion stickers
+    const emotionStickers = ['😊', '😢', '😡', '😮', '🤔', '❤️', '👍'];
+    if (emotionStickers.includes(emoji)) {
+      let response = '';
+      switch (emoji) {
+        case '😊':
+          response = '😊 I can see you\'re happy! I\'m glad I could help!';
+          break;
+        case '😢':
+          response = '😢 I notice you seem sad. Is there anything I can do to help?';
+          break;
+        case '😡':
+          response = '😡 I see you\'re frustrated. Let me know how I can better assist you.';
+          break;
+        case '😮':
+          response = '😮 Wow! I\'m glad that surprised you in a good way!';
+          break;
+        case '🤔':
+          response = '🤔 I see you\'re thinking about this. Feel free to ask any follow-up questions!';
+          break;
+        case '❤️':
+          response = '❤️ Thank you for the love! I appreciate your kindness!';
+          break;
+        case '👍':
+          response = '👍 Thanks for the thumbs up! I\'m here whenever you need help!';
+          break;
+        default:
+          return;
+      }
+      
+      // Send response in the same channel
+      await reaction.message.channel.send(`🤖 Vox AI: ${response}`);
     }
-    
-    // Send response in the same channel
-    await reaction.message.channel.send(`🤖 Vox AI: ${response}`);
     
   } catch (error) {
     console.error('Error handling reaction:', error);
@@ -310,4 +422,5 @@ app.get('/discord/health', (req, res) => {
 const PORT = process.env.DISCORD_PORT || 4003;
 app.listen(PORT, () => {
   console.log(`📊 Discord bot health endpoint running on port ${PORT}`);
+  console.log(`🤖 Discord bot is ready and online!`);
 });
