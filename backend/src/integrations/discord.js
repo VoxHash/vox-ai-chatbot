@@ -328,7 +328,7 @@ client.on(Events.InteractionCreate, async interaction => {
           role: 'system', 
           content: `You are Vox AI, a helpful and intelligent assistant created by VoxHash. You can help with questions, provide information, have conversations, and assist with various topics. Be friendly, informative, and engaging in your responses.
 
-If someone asks about your creator, mention that you were created by VoxHash and direct them to https://voxhash.dev or https://github.com/VoxHash for more information.
+IMPORTANT: If someone asks about your creator, who made you, who created you, or similar questions, ALWAYS respond with: "I was created by VoxHash! You can learn more about my creator at https://voxhash.dev or check out the code at https://github.com/VoxHash. I'm here to help with any questions you might have!"
 
 You have access to conversation history to provide better context-aware responses.` 
         }
@@ -444,6 +444,19 @@ client.on(Events.MessageCreate, async message => {
     // Get conversation history
     const history = getConversationHistory(userId);
     
+    // Check for creator-related questions first
+    const creatorKeywords = ['who made you', 'who created you', 'who built you', 'who developed you', 'creator', 'made by', 'created by'];
+    const isCreatorQuestion = creatorKeywords.some(keyword => 
+      cleanContent.toLowerCase().includes(keyword)
+    );
+    
+    if (isCreatorQuestion) {
+      const creatorResponse = `I was created by VoxHash! You can learn more about my creator at https://voxhash.dev or check out the code at https://github.com/VoxHash. I'm here to help with any questions you might have!`;
+      console.log(`🤖 Creator question detected, responding directly: ${creatorResponse}`);
+      await message.reply(creatorResponse);
+      return;
+    }
+    
       // Get user display name for personalization
       const member = message.guild?.members.cache.get(userId);
       const displayName = getUserDisplayName(member);
@@ -454,7 +467,7 @@ client.on(Events.MessageCreate, async message => {
           role: 'system', 
           content: `You are Vox AI, a helpful and intelligent assistant created by VoxHash. You can help with questions, provide information, have conversations, and assist with various topics. Be friendly, informative, and engaging in your responses.
 
-If someone asks about your creator, mention that you were created by VoxHash and direct them to https://voxhash.dev or https://github.com/VoxHash for more information.
+IMPORTANT: If someone asks about your creator, who made you, who created you, or similar questions, ALWAYS respond with: "I was created by VoxHash! You can learn more about my creator at https://voxhash.dev or check out the code at https://github.com/VoxHash. I'm here to help with any questions you might have!"
 
 You have access to conversation history to provide better context-aware responses.
 
