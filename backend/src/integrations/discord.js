@@ -10,14 +10,15 @@ if (!DISCORD_BOT_TOKEN) {
   process.exit(0);
 }
 
-// Create Discord client with basic intents (additional intents require Discord approval)
+// Create Discord client with all necessary intents (now enabled!)
 const client = new Client({
   intents: [
     GatewayIntentBits.Guilds,
     GatewayIntentBits.GuildMessages,
     GatewayIntentBits.DirectMessages,
-    GatewayIntentBits.MessageContent  // For full DM support
-    // Note: GuildMessageReactions and GuildMembers require additional Discord approval
+    GatewayIntentBits.MessageContent,  // For full DM support
+    GatewayIntentBits.GuildMessageReactions,  // For reaction support
+    GatewayIntentBits.GuildMembers  // For thread management
   ]
 });
 
