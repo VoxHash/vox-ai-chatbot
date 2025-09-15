@@ -347,37 +347,52 @@ async function getUpdates() {
               } else if (text.startsWith('/status')) {
                 await sendMessage(chatId, `Vox AI is online and ready! ✅\n\nI can help you with:\n• General questions\n• Information requests\n• Casual conversation\n• Remember our previous conversations\n• React to your emotions\n• Discussion topics in groups\n\nTry asking me anything!`);
               } else if (text.trim()) {
-            // Add user message to memory
-            addToMemory(message.from.id, 'user', text);
-            
-            // Get conversation history
-            const history = getConversationHistory(message.from.id);
-            
-            // Get user display name for personalization
-            const displayName = getUserDisplayName(message.from);
-            
-            // Check for creator-related questions first
-            const creatorKeywords = ['who made you', 'who created you', 'who built you', 'who developed you', 'creator', 'made by', 'created by'];
-            const isCreatorQuestion = creatorKeywords.some(keyword => 
-              text.toLowerCase().includes(keyword)
-            );
-            
-            if (isCreatorQuestion) {
-              const creatorResponse = `I was created by VoxHash! You can learn more about my creator at https://voxhash.dev or check out the code at https://github.com/VoxHash. I'm here to help with any questions you might have!`;
-              console.log(`🤖 Creator question detected, responding directly: ${creatorResponse}`);
-              await sendMessage(chatId, creatorResponse, true);
-              return;
-            }
-            
-            // Use AI model to generate response
-            try {
-              console.log(`🧠 Processing message with AI: ${text}`);
-              
-              // Build messages with memory
-              const messages = [
-                { 
-                  role: 'system', 
-                  content: `You are Vox AI, a helpful and intelligent assistant created by VoxHash. You can help with questions, provide information, have conversations, and assist with various topics. Be friendly, informative, and engaging in your responses.
+                // Check if this is a group message and if the bot is mentioned
+                const isGroup = message.chat.type === 'group' || message.chat.type === 'supergroup';
+                const isMentioned = message.entities && message.entities.some(entity => 
+                  entity.type === 'mention' && text.includes('@VoxAssistantBot')
+                );
+                
+                // Only process if it's a DM or if the bot is mentioned in a group
+                if (!isGroup || isMentioned) {
+                  // Remove the mention from the text for processing
+                  let cleanText = text;
+                  if (isMentioned) {
+                    cleanText = text.replace(/@VoxAssistantBot\s*/g, '').trim();
+                  }
+                  
+                  if (cleanText) {
+                    // Add user message to memory
+                    addToMemory(message.from.id, 'user', cleanText);
+                    
+                    // Get conversation history
+                    const history = getConversationHistory(message.from.id);
+                    
+                    // Get user display name for personalization
+                    const displayName = getUserDisplayName(message.from);
+                    
+                    // Check for creator-related questions first
+                    const creatorKeywords = ['who made you', 'who created you', 'who built you', 'who developed you', 'creator', 'made by', 'created by'];
+                    const isCreatorQuestion = creatorKeywords.some(keyword => 
+                      cleanText.toLowerCase().includes(keyword)
+                    );
+                    
+                    if (isCreatorQuestion) {
+                      const creatorResponse = `I was created by VoxHash! You can learn more about my creator at https://voxhash.dev or check out the code at https://github.com/VoxHash. I'm here to help with any questions you might have!`;
+                      console.log(`🤖 Creator question detected, responding directly: ${creatorResponse}`);
+                      await sendMessage(chatId, creatorResponse, true);
+                      return;
+                    }
+                    
+                    // Use AI model to generate response
+                    try {
+                      console.log(`🧠 Processing message with AI: ${cleanText}`);
+                      
+                      // Build messages with memory
+                      const messages = [
+                        { 
+                          role: 'system', 
+                          content: `You are Vox AI, a helpful and intelligent assistant created by VoxHash. You can help with questions, provide information, have conversations, and assist with various topics. Be friendly, informative, and engaging in your responses.
 
 IMPORTANT: If someone asks about your creator, who made you, who created you, or similar questions, ALWAYS respond with: "I was created by VoxHash! You can learn more about my creator at https://voxhash.dev or check out the code at https://github.com/VoxHash. I'm here to help with any questions you might have!"
 
@@ -389,67 +404,69 @@ Special features:
 - You provide personalized responses based on conversation history
 - When referring to users, use their first name if available, otherwise their username
 - The current user's display name is: ${displayName}` 
-                }
-              ];
-              
-              // Add conversation history
-              history.forEach(msg => {
-                messages.push({ role: msg.role, content: msg.content });
-              });
-              
-              // Add current message
-              messages.push({ role: 'user', content: text });
-              
-              const aiResponse = await completeChat(messages);
-              console.log(`🤖 AI Response: ${aiResponse}`);
-              
-              // Add AI response to memory
-              addToMemory(message.from.id, 'assistant', aiResponse);
-              
-              // Check if user explicitly wants to create a discussion topic
-              if (message.chat.type === 'group' || message.chat.type === 'supergroup') {
-                if (text.toLowerCase().includes('create topic') || text.toLowerCase().includes('start discussion') || text.toLowerCase().includes('discuss topic')) {
-                  // Extract the actual topic from the message
-                  let topic = text;
-                  
-                  // Remove common topic creation phrases to get the actual topic
-                  topic = topic.replace(/create topic about/gi, '');
-                  topic = topic.replace(/create topic for/gi, '');
-                  topic = topic.replace(/start discussion about/gi, '');
-                  topic = topic.replace(/discuss topic about/gi, '');
-                  topic = topic.replace(/create topic/gi, '');
-                  topic = topic.replace(/start discussion/gi, '');
-                  topic = topic.replace(/discuss topic/gi, '');
-                  topic = topic.replace(/about/gi, '');
-                  topic = topic.trim();
-                  
-                  // If no topic extracted, use the original message
-                  if (!topic || topic.length < 3) {
-                    topic = text;
+                        }
+                      ];
+                      
+                      // Add conversation history
+                      history.forEach(msg => {
+                        messages.push({ role: msg.role, content: msg.content });
+                      });
+                      
+                      // Add current message
+                      messages.push({ role: 'user', content: cleanText });
+                      
+                      const aiResponse = await completeChat(messages);
+                      console.log(`🤖 AI Response: ${aiResponse}`);
+                      
+                      // Add AI response to memory
+                      addToMemory(message.from.id, 'assistant', aiResponse);
+                      
+                      // Check if user explicitly wants to create a discussion topic
+                      if (message.chat.type === 'group' || message.chat.type === 'supergroup') {
+                        if (cleanText.toLowerCase().includes('create topic') || cleanText.toLowerCase().includes('start discussion') || cleanText.toLowerCase().includes('discuss topic')) {
+                          // Extract the actual topic from the message
+                          let topic = cleanText;
+                          
+                          // Remove common topic creation phrases to get the actual topic
+                          topic = topic.replace(/create topic about/gi, '');
+                          topic = topic.replace(/create topic for/gi, '');
+                          topic = topic.replace(/start discussion about/gi, '');
+                          topic = topic.replace(/discuss topic about/gi, '');
+                          topic = topic.replace(/create topic/gi, '');
+                          topic = topic.replace(/start discussion/gi, '');
+                          topic = topic.replace(/discuss topic/gi, '');
+                          topic = topic.replace(/about/gi, '');
+                          topic = topic.trim();
+                          
+                          // If no topic extracted, use the original message
+                          if (!topic || topic.length < 3) {
+                            topic = cleanText;
+                          }
+                          
+                          // Generate personalized topic title
+                          const topicTitle = generateThreadTitle(topic, aiResponse);
+                          
+                          await sendMessage(chatId, `📌 **Discussion Topic: ${topicTitle}**\n\nThis seems like a great topic for discussion! Feel free to continue the conversation here. I'll be monitoring and can help with follow-up questions!`);
+                          console.log(`📌 Created discussion topic: ${topicTitle} (user requested) - Original topic: "${topic}"`);
+                        } else if (shouldCreateDiscussionTopic(cleanText, aiResponse)) {
+                          const topicTitle = generateThreadTitle(cleanText, aiResponse);
+                          await sendMessage(chatId, `📌 **Discussion Topic: ${topicTitle}**\n\nThis seems like a great topic for discussion! Feel free to continue the conversation here. I'll be monitoring and can help with follow-up questions!`);
+                          console.log(`📌 Created discussion topic: ${topicTitle}`);
+                        }
+                      }
+                      
+                      // Send AI response to user with reactions
+                      await sendMessage(chatId, aiResponse, true);
+                      
+                    } catch (error) {
+                      console.error('AI processing error:', error);
+                      // Fallback response if AI fails
+                      await sendMessage(chatId, `I apologize, but I'm having trouble processing your request right now. Please try again in a moment.`);
+                    }
                   }
-                  
-                  // Generate personalized topic title
-                  const topicTitle = generateThreadTitle(topic, aiResponse);
-                  
-                  await sendMessage(chatId, `📌 **Discussion Topic: ${topicTitle}**\n\nThis seems like a great topic for discussion! Feel free to continue the conversation here. I'll be monitoring and can help with follow-up questions!`);
-                  console.log(`📌 Created discussion topic: ${topicTitle} (user requested) - Original topic: "${topic}"`);
-                } else if (shouldCreateDiscussionTopic(text, aiResponse)) {
-                  const topicTitle = generateThreadTitle(text, aiResponse);
-                  await sendMessage(chatId, `📌 **Discussion Topic: ${topicTitle}**\n\nThis seems like a great topic for discussion! Feel free to continue the conversation here. I'll be monitoring and can help with follow-up questions!`);
-                  console.log(`📌 Created discussion topic: ${topicTitle}`);
                 }
               }
-              
-              // Send AI response to user with reactions
-              await sendMessage(chatId, aiResponse, true);
-              
-            } catch (error) {
-              console.error('AI processing error:', error);
-              // Fallback response if AI fails
-              await sendMessage(chatId, `I apologize, but I'm having trouble processing your request right now. Please try again in a moment.`);
             }
-          }
-        }
       }
     }
   } catch (error) {
