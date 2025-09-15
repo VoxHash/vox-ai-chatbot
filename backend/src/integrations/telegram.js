@@ -265,12 +265,21 @@ async function sendMessage(chatId, text, withReactions = false) {
 // Function to get updates from Telegram
 async function getUpdates() {
   try {
+    console.log(`🔄 Polling for updates with offset: ${lastUpdateId + 1}`);
     const response = await fetch(`${api}/getUpdates?offset=${lastUpdateId + 1}&timeout=30`);
     const data = await response.json();
+    
+    console.log(`📊 Received ${data.result ? data.result.length : 0} updates`);
+    
+    // Check if we're getting any updates at all
+    if (data.result && data.result.length === 0) {
+      console.log('⚠️  No updates received. Bot may not be properly added to groups or may need permissions.');
+    }
     
         if (data.ok && data.result.length > 0) {
           for (const update of data.result) {
             lastUpdateId = update.update_id;
+            console.log(`📱 Processing update ${update.update_id}:`, JSON.stringify(update, null, 2));
 
             // Handle callback queries (button presses)
             if (update.callback_query) {
