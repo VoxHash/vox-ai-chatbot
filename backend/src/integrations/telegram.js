@@ -57,7 +57,7 @@ async function getUpdates() {
           
           // Process different types of messages
           if (text.startsWith('/start')) {
-            await sendMessage(chatId, `🤖 Hello ${username}! I'm Vox AI Chatbot. Send me any message and I'll respond!`);
+            await sendMessage(chatId, `🤖 Hello ${username}! I'm Vox. Send me any message and I'll respond!`);
           } else if (text.startsWith('/help')) {
             await sendMessage(chatId, `🤖 Vox AI Commands:\n/start - Start the bot\n/help - Show this help\n/status - Check bot status\n\nJust send me any message to chat!`);
           } else if (text.startsWith('/status')) {
@@ -70,7 +70,7 @@ async function getUpdates() {
               const messages = [
                 { 
                   role: 'system', 
-                  content: 'You are Vox AI, a helpful and intelligent assistant. You can help with questions, provide information, have conversations, and assist with various topics. Be friendly, informative, and engaging in your responses.' 
+                  content: 'You are Vox, a helpful and intelligent assistant. You can help with questions, provide information, have conversations, and assist with various topics. Be friendly, informative, and engaging in your responses.' 
                 },
                 { 
                   role: 'user', 
@@ -79,15 +79,15 @@ async function getUpdates() {
               ];
               
               const aiResponse = await completeChat(messages);
-              console.log(`🤖 AI Response: ${aiResponse}`);
+              console.log(`${aiResponse}`);
               
               // Send AI response to user
-              await sendMessage(chatId, `🤖 Vox AI: ${aiResponse}`);
+              await sendMessage(chatId, `${aiResponse}`);
               
             } catch (error) {
               console.error('AI processing error:', error);
               // Fallback response if AI fails
-              await sendMessage(chatId, `🤖 Vox AI: I apologize, but I'm having trouble processing your request right now. Please try again in a moment.`);
+              await sendMessage(chatId, `I apologize, but I'm having trouble processing your request right now. Please try again in a moment.`);
             }
           }
         }
