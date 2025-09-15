@@ -106,6 +106,12 @@ function generateThreadTitle(message, aiResponse) {
   if (messageText.includes('tutorial') || messageText.includes('guide')) {
     topics.push('Tutorial');
   }
+  if (messageText.includes('dragon ball') || messageText.includes('one piece') || messageText.includes('anime')) {
+    topics.push('Anime Discussion');
+  }
+  if (messageText.includes('straw hat') || messageText.includes('one piece')) {
+    topics.push('One Piece Discussion');
+  }
   
   // If we found specific topics, use them
   if (topics.length > 0) {
@@ -122,6 +128,28 @@ function generateThreadTitle(message, aiResponse) {
   
   // Final fallback
   return 'General Discussion';
+}
+
+// Helper function to get user display name (nickname or username)
+function getUserDisplayName(member) {
+  if (member && member.nickname) {
+    return member.nickname;
+  }
+  return member ? member.user.username : 'User';
+}
+
+// Helper function to generate welcome message
+function generateWelcomeMessage(member) {
+  const displayName = getUserDisplayName(member);
+  const welcomeMessages = [
+    `Welcome to the server, ${displayName}! 🎉 I'm Vox AI, your friendly assistant. Feel free to ask me anything or just say hello!`,
+    `Hey there, ${displayName}! 👋 Great to have you here! I'm Vox AI and I'm here to help with any questions you might have.`,
+    `Welcome aboard, ${displayName}! 🚀 I'm Vox AI, your AI assistant. Don't hesitate to reach out if you need help with anything!`,
+    `Hello ${displayName}! 😊 Welcome to our community! I'm Vox AI and I'm excited to chat with you. What brings you here today?`,
+    `Hi ${displayName}! 🌟 Welcome to the server! I'm Vox AI, your helpful assistant. Feel free to start a conversation anytime!`
+  ];
+  
+  return welcomeMessages[Math.floor(Math.random() * welcomeMessages.length)];
 }
 
 // Create Discord client with all necessary intents (now enabled!)
@@ -210,6 +238,29 @@ client.once(Events.ClientReady, readyClient => {
   console.log(`📱 Bot is online and ready to chat in DMs and servers!`);
   console.log(`🧵 Thread support enabled for complex discussions!`);
   console.log(`😊 Reaction support enabled for user feedback!`);
+  console.log(`👋 Welcome messages enabled for new members!`);
+});
+
+// Handle new member joins
+client.on(Events.GuildMemberAdd, async member => {
+  try {
+    console.log(`👋 New member joined: ${member.user.username} (${member.user.id})`);
+    
+    // Find a general channel to send welcome message
+    const generalChannel = member.guild.channels.cache.find(channel => 
+      channel.name === 'general' && channel.type === 0 // Text channel
+    ) || member.guild.channels.cache.find(channel => 
+      channel.type === 0 && channel.permissionsFor(member.guild.members.me).has('SendMessages')
+    );
+    
+    if (generalChannel) {
+      const welcomeMessage = generateWelcomeMessage(member);
+      await generalChannel.send(welcomeMessage);
+      console.log(`👋 Sent welcome message for ${member.user.username}`);
+    }
+  } catch (error) {
+    console.error('Error sending welcome message:', error);
+  }
 });
 
 // Handle slash commands
@@ -299,6 +350,11 @@ client.on(Events.MessageCreate, async message => {
   const isThread = message.channel.isThread();
   const userId = message.author.id;
   
+  // Log thread detection for debugging
+  if (isThread) {
+    console.log(`🧵 Thread detected: ${message.channel.name} (Parent: ${message.channel.parent?.name || 'Unknown'})`);
+  }
+  
   // Respond to DMs directly, when mentioned in servers, or in threads
   if (!isDM && !isMentioned && !isThread) return;
   
@@ -351,11 +407,15 @@ client.on(Events.MessageCreate, async message => {
     // Get conversation history
     const history = getConversationHistory(userId);
     
-    // Build messages with memory
-    const messages = [
-      { 
-        role: 'system', 
-        content: `You are Vox AI, a helpful and intelligent assistant created by VoxHash. You can help with questions, provide information, have conversations, and assist with various topics. Be friendly, informative, and engaging in your responses.
+      // Get user display name for personalization
+      const member = message.guild?.members.cache.get(userId);
+      const displayName = getUserDisplayName(member);
+      
+      // Build messages with memory
+      const messages = [
+        { 
+          role: 'system', 
+          content: `You are Vox AI, a helpful and intelligent assistant created by VoxHash. You can help with questions, provide information, have conversations, and assist with various topics. Be friendly, informative, and engaging in your responses.
 
 If someone asks about your creator, mention that you were created by VoxHash and direct them to https://voxhash.dev or https://github.com/VoxHash for more information.
 
@@ -364,9 +424,11 @@ You have access to conversation history to provide better context-aware response
 Special features:
 - You can help users change their username on the server
 - You can recognize and mention admins by name
-- You remember previous conversations for better context` 
-      }
-    ];
+- You remember previous conversations for better context
+- When referring to users, use their nickname if available, otherwise their username
+- The current user's display name is: ${displayName}` 
+        }
+      ];
     
     // Add conversation history
     history.forEach(msg => {
@@ -395,8 +457,27 @@ Special features:
       console.log('Could not add emotion reaction:', error.message);
     }
     
+    // Check if user explicitly wants to create a thread
+    if (message.channel.type !== 'DM' && (cleanContent.toLowerCase().includes('create a thread') || cleanContent.toLowerCase().includes('make a thread'))) {
+      try {
+        // Generate personalized thread title
+        const threadTitle = generateThreadTitle(cleanContent, aiResponse);
+        
+        const thread = await responseMessage.startThread({
+          name: threadTitle,
+          autoArchiveDuration: 60, // 1 hour
+          reason: 'User requested thread creation'
+        });
+        
+        await thread.send(`🧵 **Thread created for this discussion!**\n\nFeel free to continue the conversation here. I'll be monitoring this thread and can help with follow-up questions!`);
+        console.log(`🧵 Created thread: ${threadTitle} (user requested)`);
+      } catch (error) {
+        console.log('Could not create thread:', error.message);
+        await message.reply(`I'm sorry, I couldn't create the thread. Please try again later! 😔`);
+      }
+    }
     // Ask user if they want to create a thread for complex discussions (only in servers)
-    if (message.channel.type !== 'DM' && shouldCreateThread(cleanContent, aiResponse, cleanContent)) {
+    else if (message.channel.type !== 'DM' && shouldCreateThread(cleanContent, aiResponse, cleanContent)) {
       try {
         // Ask user if they want a thread instead of creating it automatically
         const threadQuestion = await message.channel.send(`This seems like a complex topic that might benefit from a dedicated thread for better organization. Would you like me to create a thread for this discussion? Just reply with "yes" or "no"! 🧵`);
@@ -460,7 +541,8 @@ client.on(Events.MessageReactionAdd, async (reaction, user) => {
     // Handle reactions on bot messages (personalized responses)
     if (reaction.message.author.id === client.user.id) {
       const userId = user.id;
-      const userName = user.username;
+      const member = reaction.message.guild?.members.cache.get(userId);
+      const displayName = getUserDisplayName(member);
       
       // Get user's conversation history for personalized response
       const history = getConversationHistory(userId);
@@ -469,34 +551,34 @@ client.on(Events.MessageReactionAdd, async (reaction, user) => {
       let response = '';
       switch (emoji) {
         case '👍':
-          response = `👍 Thanks for the thumbs up, ${userName}! I'm glad I could help! ${lastUserMessage ? `I hope my response about "${lastUserMessage.substring(0, 50)}..." was helpful!` : ''}`;
+          response = `👍 Thanks for the thumbs up, ${displayName}! I'm glad I could help! ${lastUserMessage ? `I hope my response about "${lastUserMessage.substring(0, 50)}..." was helpful!` : ''}`;
           break;
         case '👎':
-          response = `👎 I see you didn't find that helpful, ${userName}. Could you tell me what I can improve? I want to give you the best possible response!`;
+          response = `👎 I see you didn't find that helpful, ${displayName}. Could you tell me what I can improve? I want to give you the best possible response!`;
           break;
         case '💡':
-          response = `💡 Great idea, ${userName}! I love your thinking! Feel free to share more thoughts or ask follow-up questions!`;
+          response = `💡 Great idea, ${displayName}! I love your thinking! Feel free to share more thoughts or ask follow-up questions!`;
           break;
         case '❓':
-          response = `❓ I'm here to help, ${userName}! What would you like to know more about? I'm ready to dive deeper into any topic!`;
+          response = `❓ I'm here to help, ${displayName}! What would you like to know more about? I'm ready to dive deeper into any topic!`;
           break;
         case '❤️':
-          response = `❤️ Thank you for the love, ${userName}! I really appreciate your kindness! You're awesome!`;
+          response = `❤️ Thank you for the love, ${displayName}! I really appreciate your kindness! You're awesome!`;
           break;
         case '😊':
-          response = `😊 I can see you're happy, ${userName}! That makes me happy too! I'm glad I could brighten your day!`;
+          response = `😊 I can see you're happy, ${displayName}! That makes me happy too! I'm glad I could brighten your day!`;
           break;
         case '😢':
-          response = `😢 I notice you seem sad, ${userName}. Is there anything I can do to help? I'm here for you!`;
+          response = `😢 I notice you seem sad, ${displayName}. Is there anything I can do to help? I'm here for you!`;
           break;
         case '😡':
-          response = `😡 I see you're frustrated, ${userName}. Let me know how I can better assist you. I want to help!`;
+          response = `😡 I see you're frustrated, ${displayName}. Let me know how I can better assist you. I want to help!`;
           break;
         case '😮':
-          response = `😮 Wow, ${userName}! I'm glad that surprised you in a good way! I love those "aha!" moments!`;
+          response = `😮 Wow, ${displayName}! I'm glad that surprised you in a good way! I love those "aha!" moments!`;
           break;
         case '🤔':
-          response = `🤔 I see you're thinking about this, ${userName}. Feel free to ask any follow-up questions! I'm here to help you explore!`;
+          response = `🤔 I see you're thinking about this, ${displayName}. Feel free to ask any follow-up questions! I'm here to help you explore!`;
           break;
         default:
           return;
