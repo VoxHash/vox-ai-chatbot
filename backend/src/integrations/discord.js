@@ -310,7 +310,7 @@ client.on(Events.InteractionCreate, async interaction => {
     
     try {
       console.log(`🧠 Processing Discord message with AI: ${message}`);
-      console.log(`📍 Channel: ${interaction.channel.type === 'DM' ? 'DM' : interaction.channel.name}`);
+      console.log(`📍 Channel: ${interaction.channel ? (interaction.channel.type === 'DM' ? 'DM' : interaction.channel.name) : 'Unknown'}`);
       console.log(`👤 User: ${interaction.user.username}`);
       
       // Add user message to memory
@@ -372,7 +372,17 @@ You have access to conversation history to provide better context-aware response
       console.error('AI processing error:', error);
       
       // Fallback response if AI fails
-      await interaction.editReply(`I apologize, but I'm having trouble processing your request right now. Please try again in a moment.`);
+      try {
+        await interaction.editReply(`I apologize, but I'm having trouble processing your request right now. Please try again in a moment.`);
+      } catch (replyError) {
+        console.error('Failed to send error reply:', replyError);
+        // If editReply fails, try followUp
+        try {
+          await interaction.followUp({ content: `I apologize, but I'm having trouble processing your request right now. Please try again in a moment.`, ephemeral: true });
+        } catch (followUpError) {
+          console.error('Failed to send followUp:', followUpError);
+        }
+      }
     }
   }
 });
@@ -740,23 +750,5 @@ client.login(DISCORD_BOT_TOKEN).then(() => {
   process.exit(1);
 });
 
-// Health check endpoint (for monitoring)
-import express from 'express';
-const app = express();
-app.use(express.json());
-
-app.get('/discord/health', (req, res) => {
-  res.json({ 
-    status: 'ok', 
-    bot_token_set: !!DISCORD_BOT_TOKEN,
-    client_id_set: !!DISCORD_CLIENT_ID,
-    bot_ready: client.isReady(),
-    bot_user: client.user ? client.user.tag : null
-  });
-});
-
-const PORT = process.env.DISCORD_PORT || 4003;
-app.listen(PORT, () => {
-  console.log(`📊 Discord bot health endpoint running on port ${PORT}`);
-  console.log(`🤖 Discord bot is ready and online!`);
-});
+// Bot is ready - no need for Express server
+console.log('🤖 Discord bot is ready and online!');
