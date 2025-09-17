@@ -15,7 +15,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Web3 integration and crypto payments
 - Advanced user management and roles
 
-## [0.0.2] - 2024-01-17
+## [0.0.2] - 2025-09-17
 
 ### ✨ Added
 - **Vox's Personality**: Female AI with nerdy goth-kawaii personality
@@ -57,7 +57,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Bot Tokens**: Secure handling of credentials and tokens
 - **Memory Data**: Protection of user conversation data
 
-## [0.0.1] - 2024-01-01
+## [0.0.1] - 2025-01-01
 
 ### ✨ Added
 - Initial release of Vox AI Chatbot
@@ -74,13 +74,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## 🎯 Roadmap
 
-### Phase 1: Foundation & Stability (Q1 2024)
+### Phase 1: Foundation & Stability (Q1 2025)
 - [ ] Fix WhatsApp QR connection issues
 - [ ] Evolution API integration for WhatsApp
 - [ ] Web design optimization
 - [ ] Additional language support (Catalan, Russian, Japanese, Chinese)
 
-### Phase 2: Enhanced Features (Q2 2024)
+### Phase 2: Enhanced Features (Q2 2025)
 - [ ] Voice message support
 - [ ] File upload and sharing
 - [ ] Conversation export/import
@@ -88,19 +88,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - [ ] User roles and permissions
 - [ ] Custom model selection
 
-### Phase 3: AI & Intelligence (Q3 2024)
+### Phase 3: AI & Intelligence (Q3 2025)
 - [ ] Additional AI providers
 - [ ] Smart model selection
 - [ ] Vox Brain Model development
 - [ ] Custom memory system
 - [ ] Response quality system
 
-### Phase 4: Mobile & Accessibility (Q4 2024)
+### Phase 4: Mobile & Accessibility (Q4 2025)
 - [ ] React Native mobile app
 - [ ] Progressive Web App (PWA)
 - [ ] Accessibility improvements
 
-### Phase 5: Monetization & Web3 (Q1 2025)
+### Phase 5: Monetization & Web3 (Q1 2026)
 - [ ] Crypto payment support
 - [ ] Membership tier system
 - [ ] Blockchain wallet integration
