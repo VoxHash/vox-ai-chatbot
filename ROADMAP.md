@@ -9,28 +9,30 @@ Transform Vox AI Chatbot into the ultimate AI companion with multi-platform supp
 
 ## 📅 Development Phases
 
-### 🚀 Phase 1: Foundation & Stability (Q1 2025)
-**Goal**: Stabilize core functionality and improve user experience
+### 🚀 Phase 1: Critical Fixes & Stability (Q3 2025 - CURRENT)
+**Goal**: Fix critical issues and stabilize core functionality
 
-#### 🔧 Core Improvements
-- [ ] **Fix WhatsApp QR Connection Issues**
-  - Implement more robust reconnection logic
+#### 🔧 Critical Fixes (v0.0.3 - September 2025)
+- [x] **Vox's Self-Awareness** - Added self-awareness and existence knowledge
+- [x] **Korean & Basque Language Support** - Added Korean (ko) and Basque (eu) languages
+- [x] **Updated Slack Integration** - Enhanced Slack bot with full feature parity
+- [ ] **Fix WhatsApp Connection Stability** - Resolve "Connection Terminated" and "Stream Errored" issues
+  - Implement better reconnection logic
   - Add connection health monitoring
   - Improve error handling and recovery
-  - **Priority**: High | **Effort**: Medium
+  - **Priority**: Critical | **Effort**: High | **Target**: v0.0.3
 
-- [ ] **Evolution API Integration for WhatsApp**
-  - Research and implement Evolution API as alternative to Baileys
-  - Add configuration option to switch between Baileys and Evolution API
-  - **Priority**: Medium | **Effort**: High
+- [ ] **Fix Discord Language Detection** - Resolve incorrect language detection
+  - Fix "Dime un cuento chico de vampiros" detected as English
+  - Improve Spanish pattern matching
+  - **Priority**: High | **Effort**: Medium | **Target**: v0.0.3
 
-- [ ] **Web Design Optimization**
-  - Responsive design for all device sizes
-  - Modern, friendly UI/UX design
-  - Dark/light theme support
-  - **Priority**: High | **Effort**: Medium
+- [ ] **WhatsApp Business Cloud API Integration**
+  - Research and implement WhatsApp Business Cloud API as alternative to Baileys
+  - Add configuration option to switch between Baileys and Business API
+  - **Priority**: High | **Effort**: High | **Target**: v0.0.4
 
-#### 🌍 Language Expansion
+#### 🌍 Language Expansion (v0.0.4 - October 2025)
 - [ ] **Additional Language Support**
   - Catalan (ca)
   - German (de) - Enhanced
@@ -41,9 +43,16 @@ Transform Vox AI Chatbot into the ultimate AI companion with multi-platform supp
   - Chinese (zh)
   - **Priority**: Medium | **Effort**: High
 
+#### 🎨 UI/UX Improvements (v0.0.5 - November 2025)
+- [ ] **Web Design Optimization**
+  - Responsive design for all device sizes
+  - Modern, friendly UI/UX design
+  - Dark/light theme support
+  - **Priority**: High | **Effort**: Medium
+
 ---
 
-### 🎨 Phase 2: Enhanced Features (Q2 2025)
+### 🎨 Phase 2: Enhanced Features (Q4 2025)
 **Goal**: Add advanced communication features and user management
 
 #### 📱 Communication Enhancements
@@ -87,7 +96,7 @@ Transform Vox AI Chatbot into the ultimate AI companion with multi-platform supp
 
 ---
 
-### 🤖 Phase 3: AI & Intelligence (Q3 2025)
+### 🤖 Phase 3: AI & Intelligence (Q1 2026)
 **Goal**: Expand AI capabilities and add multiple providers
 
 #### 🧠 AI Provider Integration
@@ -125,7 +134,7 @@ Transform Vox AI Chatbot into the ultimate AI companion with multi-platform supp
 
 ---
 
-### 📱 Phase 4: Mobile & Accessibility (Q4 2025)
+### 📱 Phase 4: Mobile & Accessibility (Q2 2026)
 **Goal**: Expand to mobile platforms and improve accessibility
 
 #### 📱 Mobile Development
@@ -150,7 +159,7 @@ Transform Vox AI Chatbot into the ultimate AI companion with multi-platform supp
 
 ---
 
-### 💰 Phase 5: Monetization & Web3 (Q1 2026)
+### 💰 Phase 5: Monetization & Web3 (Q3 2026)
 **Goal**: Implement monetization and Web3 features
 
 #### 💳 Payment Integration
@@ -195,7 +204,7 @@ Transform Vox AI Chatbot into the ultimate AI companion with multi-platform supp
 
 ---
 
-### 🚀 Phase 6: Advanced Features (Q2 2026)
+### 🚀 Phase 6: Advanced Features (Q4 2026)
 **Goal**: Implement advanced AI and collaboration features
 
 #### 🤝 Collaboration Features

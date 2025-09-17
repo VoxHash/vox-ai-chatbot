@@ -18,7 +18,9 @@ export function detectLanguageSimple(message) {
     'soy', 'eres', 'es', 'somos', 'sois', 'son', 'estoy', 'estás', 'está', 'estamos',
     'estáis', 'están', 'tengo', 'tienes', 'tiene', 'tenemos', 'tenéis', 'tienen',
     'puedo', 'puedes', 'puede', 'podemos', 'podéis', 'pueden', 'hago', 'haces', 'hace',
-    'hacemos', 'hacéis', 'hacen', 'digo', 'dices', 'dice', 'decimos', 'decís', 'dicen'
+    'hacemos', 'hacéis', 'hacen', 'digo', 'dices', 'dice', 'decimos', 'decís', 'dicen',
+    'cuento', 'cuentos', 'vampiros', 'vampiro', 'chico', 'chica', 'pequeño', 'pequeña',
+    'historia', 'historias', 'relato', 'relatos', 'narrativa', 'narrativas'
   ];
   
   // French indicators - very specific patterns only
@@ -60,10 +62,32 @@ export function detectLanguageSimple(message) {
     'she\'d', 'it\'d', 'we\'d', 'they\'d'
   ];
   
+  // Korean indicators
+  const koreanPatterns = [
+    '안녕', '안녕하세요', '감사', '감사합니다', '고마워', '고마워요', '죄송', '죄송합니다',
+    '미안', '미안해', '미안해요', '네', '아니요', '예', '아니', '도움', '도와주세요',
+    '정보', '질문', '답변', '알려주세요', '말해주세요', '어떻게', '무엇', '언제', '어디서',
+    '왜', '누구', '몇', '얼마', '어느', '어떤', '나는', '저는', '당신은', '그는', '그녀는',
+    '우리는', '그들은', '있어요', '없어요', '해요', '하지', '할게요', '했어요', '하고',
+    '하고있어요', '했었어요', '할거예요', '할수있어요', '못해요', '안해요', '하지않아요'
+  ];
+  
+  // Basque indicators
+  const basquePatterns = [
+    'kaixo', 'agur', 'eskerrik', 'eskerrik asko', 'milesker', 'barkatu', 'sentitzen',
+    'bai', 'ez', 'laguntza', 'lagundu', 'informazioa', 'galdera', 'erantzun',
+    'esan', 'esan iezadazu', 'nola', 'zer', 'noiz', 'non', 'zergatik', 'nor',
+    'zenbat', 'zein', 'ni', 'zu', 'bera', 'gu', 'haiek', 'dago', 'ez dago',
+    'egiten', 'egiten dut', 'egiten du', 'egiten dugu', 'egiten dute', 'egin',
+    'egiten ari', 'egiten zuen', 'egingo', 'egin daiteke', 'ezin', 'ez', 'ez du'
+  ];
+  
   // Count matches for each language
   let spanishCount = 0;
   let frenchCount = 0;
   let englishCount = 0;
+  let koreanCount = 0;
+  let basqueCount = 0;
   
   for (const pattern of spanishPatterns) {
     if (lowerMessage.includes(pattern)) {
@@ -83,13 +107,30 @@ export function detectLanguageSimple(message) {
     }
   }
   
+  for (const pattern of koreanPatterns) {
+    if (lowerMessage.includes(pattern)) {
+      koreanCount++;
+    }
+  }
+  
+  for (const pattern of basquePatterns) {
+    if (lowerMessage.includes(pattern)) {
+      basqueCount++;
+    }
+  }
+  
   // Return the language with the most matches
-  if (spanishCount > frenchCount && spanishCount > englishCount) {
-    return 'es';
-  } else if (frenchCount > spanishCount && frenchCount > englishCount) {
-    return 'fr';
-  } else if (englishCount > spanishCount && englishCount > frenchCount) {
-    return 'en';
+  const counts = [
+    { lang: 'es', count: spanishCount },
+    { lang: 'fr', count: frenchCount },
+    { lang: 'en', count: englishCount },
+    { lang: 'ko', count: koreanCount },
+    { lang: 'eu', count: basqueCount }
+  ];
+  
+  const maxCount = Math.max(...counts.map(c => c.count));
+  if (maxCount > 0) {
+    return counts.find(c => c.count === maxCount).lang;
   }
   
   // If no clear winner, check for specific strong indicators
