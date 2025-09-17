@@ -1,6 +1,6 @@
 {
-  "name": "chatbot-backend",
-  "version": "1.0.0",
+  "name": "vox-ai-chatbot-backend",
+  "version": "0.0.2",
   "type": "module",
   "scripts": {
     "dev": "node --env-file=../.env --watch src/index.js",
@@ -8,12 +8,16 @@
     "start:telegram": "node --env-file=../.env src/integrations/telegram.js",
     "start:slack": "node --env-file=../.env src/integrations/slack.js",
     "start:discord": "node --env-file=../.env src/integrations/discord.js",
+    "start:whatsapp": "node --env-file=../.env src/integrations/whatsapp_baileys.js",
     "test": "jest --env-file=../.env",
     "test:watch": "jest --watch --env-file=../.env",
     "test:integration": "jest src/tests/integrations --env-file=../.env",
     "test:coverage": "jest --coverage --env-file=../.env"
   },
   "dependencies": {
+    "@aws-sdk/client-s3": "^3.450.0",
+    "@aws-sdk/s3-request-presigner": "^3.450.0",
+    "@whiskeysockets/baileys": "^7.0.0-rc.3",
     "axios": "^1.7.2",
     "bcrypt": "^5.1.1",
     "cors": "^2.8.5",
@@ -28,6 +32,9 @@
     "node-fetch": "^3.3.2",
     "openai": "^4.53.2",
     "pg": "^8.12.0",
+    "pino": "^9.9.5",
+    "qrcode": "^1.5.4",
+    "qrcode-terminal": "^0.12.0",
     "socket.io": "^4.7.5",
     "zod": "^3.23.8"
   },

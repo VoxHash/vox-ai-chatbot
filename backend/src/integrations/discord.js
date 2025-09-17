@@ -1,6 +1,16 @@
 import 'dotenv/config';
 import { Client, GatewayIntentBits, Events, SlashCommandBuilder, REST, Routes } from 'discord.js';
 import { completeChat } from '../ai/openai.js';
+import { 
+  loadUserMemory, 
+  addToUserMemory, 
+  getConversationSummary, 
+  detectLanguage, 
+  hasUserBeenGreeted,
+  getUserPreferredLanguage 
+} from '../lib/memory.js';
+import { getLocalizedResponse, getSystemPrompt } from '../lib/language.js';
+import { getCurrentTime, getCurrentWeather, getLocationInfo, formatLocationInfo } from '../lib/realtime.js';
 
 const DISCORD_BOT_TOKEN = process.env.DISCORD_BOT_TOKEN;
 const DISCORD_CLIENT_ID = process.env.DISCORD_CLIENT_ID;
@@ -10,8 +20,16 @@ if (!DISCORD_BOT_TOKEN) {
   process.exit(0);
 }
 
+if (!DISCORD_CLIENT_ID) {
+  console.log('DISCORD_CLIENT_ID not set. Discord integration disabled.');
+  process.exit(0);
+}
+
 // Memory system for conversation context
 const conversationMemory = new Map();
+
+// Rate limiting to prevent duplicate processing
+const processingUsers = new Set();
 const MAX_MEMORY_SIZE = 10; // Keep last 10 messages per user
 
 // Helper function to get conversation history
@@ -49,28 +67,23 @@ function detectEmotion(text) {
   if (lowerText.includes('😡') || lowerText.includes('angry') || lowerText.includes('mad') || lowerText.includes('frustrated')) {
     return 'angry';
   }
-  if (lowerText.includes('😮') || lowerText.includes('wow') || lowerText.includes('amazing') || lowerText.includes('incredible')) {
-    return 'surprised';
+  if (lowerText.includes('😮') || lowerText.includes('wow') || lowerText.includes('amazing') || lowerText.includes('incredible') || lowerText.includes('excited')) {
+    return 'excited';
   }
-  if (lowerText.includes('🤔') || lowerText.includes('hmm') || lowerText.includes('confused') || lowerText.includes('?') || lowerText.includes('help')) {
+  if (lowerText.includes('😕') || lowerText.includes('confused') || lowerText.includes('huh') || lowerText.includes('what')) {
     return 'confused';
   }
-  if (lowerText.includes('❤️') || lowerText.includes('love') || lowerText.includes('heart')) {
-    return 'love';
-  }
-  
   return 'neutral';
 }
 
-// Helper function to get appropriate sticker for emotion
+// Helper function to get emoji for emotion
 function getStickerForEmotion(emotion) {
   const stickers = {
     'happy': '😊',
     'sad': '😢',
     'angry': '😡',
-    'surprised': '😮',
-    'confused': '🤔',
-    'love': '❤️',
+    'excited': '😮',
+    'confused': '😕',
     'neutral': '👍'
   };
   return stickers[emotion] || '👍';
@@ -85,14 +98,11 @@ function generateThreadTitle(message, aiResponse) {
   const topics = [];
   
   // Check for specific topics
-  if (messageText.includes('harry potter') || messageText.includes('hogwarts')) {
-    topics.push('Harry Potter');
-  }
   if (messageText.includes('programming') || messageText.includes('code') || messageText.includes('development') || messageText.includes('php') || messageText.includes('javascript') || messageText.includes('python')) {
     topics.push('Programming');
   }
   if (messageText.includes('ai') || messageText.includes('artificial intelligence')) {
-    topics.push('AI Discussion');
+    topics.push('AI');
   }
   if (messageText.includes('discord') || messageText.includes('bot')) {
     topics.push('Discord Bot');
@@ -101,40 +111,37 @@ function generateThreadTitle(message, aiResponse) {
     topics.push('Q&A');
   }
   if (messageText.includes('project') || messageText.includes('planning')) {
-    topics.push('Project Discussion');
+    topics.push('Project');
   }
   if (messageText.includes('tutorial') || messageText.includes('guide')) {
     topics.push('Tutorial');
   }
-  if (messageText.includes('dragon ball') || messageText.includes('one piece') || messageText.includes('anime')) {
-    topics.push('Anime Discussion');
+  if (messageText.includes('anime') || messageText.includes('manga')) {
+    topics.push('Anime');
   }
-  if (messageText.includes('straw hat') || messageText.includes('one piece')) {
-    topics.push('One Piece Discussion');
-  }
-  if (messageText.includes('fried chicken') || messageText.includes('food') || messageText.includes('cooking') || messageText.includes('recipe')) {
-    topics.push('Food Discussion');
+  if (messageText.includes('food') || messageText.includes('cooking') || messageText.includes('recipe') || messageText.includes('pasta') || messageText.includes('sandwich')) {
+    topics.push('Food');
   }
   if (messageText.includes('movie') || messageText.includes('film') || messageText.includes('cinema')) {
-    topics.push('Movie Discussion');
+    topics.push('Movies');
   }
   if (messageText.includes('game') || messageText.includes('gaming') || messageText.includes('gta') || messageText.includes('video game')) {
-    topics.push('Gaming Discussion');
+    topics.push('Gaming');
   }
   if (messageText.includes('music') || messageText.includes('song') || messageText.includes('band')) {
-    topics.push('Music Discussion');
+    topics.push('Music');
   }
   if (messageText.includes('sport') || messageText.includes('football') || messageText.includes('basketball') || messageText.includes('soccer')) {
-    topics.push('Sports Discussion');
+    topics.push('Sports');
   }
   if (messageText.includes('travel') || messageText.includes('vacation') || messageText.includes('trip')) {
-    topics.push('Travel Discussion');
+    topics.push('Travel');
   }
   if (messageText.includes('book') || messageText.includes('reading') || messageText.includes('novel')) {
-    topics.push('Books Discussion');
+    topics.push('Books');
   }
   if (messageText.includes('science') || messageText.includes('technology') || messageText.includes('tech')) {
-    topics.push('Science & Tech Discussion');
+    topics.push('Science & Tech');
   }
   
   // If we found specific topics, use them
@@ -145,7 +152,7 @@ function generateThreadTitle(message, aiResponse) {
   // Extract first few meaningful words from the message as fallback
   const words = message.split(' ').filter(word => 
     word.length > 2 && 
-    !['the', 'and', 'or', 'but', 'in', 'on', 'at', 'to', 'for', 'of', 'with', 'by', 'a', 'an'].includes(word.toLowerCase())
+    !['the', 'and', 'or', 'but', 'in', 'on', 'at', 'to', 'for', 'of', 'with', 'by', 'a', 'an', 'make', 'create', 'discussion', 'thread'].includes(word.toLowerCase())
   ).slice(0, 3);
   
   if (words.length > 0) {
@@ -153,14 +160,6 @@ function generateThreadTitle(message, aiResponse) {
     if (cleanWords.length > 0) {
       return cleanWords + ' Discussion';
     }
-  }
-  
-  // Extract first few words from the message as fallback
-  const fallbackWords = message.split(' ').slice(0, 3).join(' ');
-  const cleanFallback = fallbackWords.replace(/[^\w\s]/g, '').trim();
-  
-  if (cleanFallback.length > 0) {
-    return cleanFallback + ' Discussion';
   }
   
   // Final fallback
@@ -176,97 +175,29 @@ function getUserDisplayName(member) {
 }
 
 // Helper function to generate welcome message
-function generateWelcomeMessage(member) {
-  const displayName = getUserDisplayName(member);
+function generateWelcomeMessage(username) {
   const welcomeMessages = [
-    `Welcome to the server, ${displayName}! 🎉 I'm Vox AI, your friendly assistant. Feel free to ask me anything or just say hello!`,
-    `Hey there, ${displayName}! 👋 Great to have you here! I'm Vox AI and I'm here to help with any questions you might have.`,
-    `Welcome aboard, ${displayName}! 🚀 I'm Vox AI, your AI assistant. Don't hesitate to reach out if you need help with anything!`,
-    `Hello ${displayName}! 😊 Welcome to our community! I'm Vox AI and I'm excited to chat with you. What brings you here today?`,
-    `Hi ${displayName}! 🌟 Welcome to the server! I'm Vox AI, your helpful assistant. Feel free to start a conversation anytime!`
+    `Welcome to the server, ${username}! 🎉 I'm Vox AI, your helpful assistant. Feel free to ask me anything!`,
+    `Hey there, ${username}! 👋 Great to have you here! I'm Vox AI and I'm here to help with any questions you might have.`,
+    `Welcome aboard, ${username}! 🚀 I'm Vox AI, your friendly neighborhood bot. Don't hesitate to reach out if you need assistance!`,
+    `Hello ${username}! 😊 I'm Vox AI, and I'm excited to help you with whatever you need. Welcome to the community!`,
+    `Hi ${username}! 🌟 Welcome to the server! I'm Vox AI, your personal assistant. Feel free to chat with me anytime!`
   ];
   
   return welcomeMessages[Math.floor(Math.random() * welcomeMessages.length)];
 }
 
-// Create Discord client with all necessary intents (now enabled!)
+// Create Discord client with all necessary intents
 const client = new Client({
   intents: [
     GatewayIntentBits.Guilds,
     GatewayIntentBits.GuildMessages,
     GatewayIntentBits.DirectMessages,
-    GatewayIntentBits.MessageContent,  // For full DM support
-    GatewayIntentBits.GuildMessageReactions,  // For reaction support
-    GatewayIntentBits.GuildMembers  // For thread management
+    GatewayIntentBits.MessageContent,
+    GatewayIntentBits.GuildMessageReactions,
+    GatewayIntentBits.GuildMembers
   ]
 });
-
-// Helper function to determine if a topic should have a thread
-function shouldCreateThread(message, aiResponse, userMessage) {
-  const messageText = message.toLowerCase();
-  const responseText = aiResponse.toLowerCase();
-  
-  // Check if user explicitly wants to continue the topic
-  const continueKeywords = [
-    'continue', 'keep going', 'more details', 'elaborate', 'explain more',
-    'tell me more', 'go on', 'continue this', 'keep discussing'
-  ];
-  
-  const wantsToContinue = continueKeywords.some(keyword => 
-    messageText.includes(keyword) || userMessage.toLowerCase().includes(keyword)
-  );
-  
-  // Check if response is very long (more than 300 characters)
-  const isVeryLongResponse = aiResponse.length > 300;
-  
-  // Check if it's a complex topic that might need follow-up
-  const complexKeywords = [
-    'tutorial', 'guide', 'step by step', 'how to', 'explain in detail',
-    'project', 'planning', 'brainstorm', 'discussion', 'debate'
-  ];
-  
-  const isComplexTopic = complexKeywords.some(keyword => 
-    messageText.includes(keyword) || responseText.includes(keyword)
-  );
-  
-  // Only create thread if user wants to continue OR topic is very long/complex
-  return wantsToContinue || (isVeryLongResponse && isComplexTopic);
-}
-
-// Helper function to check if user wants to change nickname
-function wantsToChangeNickname(message) {
-  const lowerMessage = message.toLowerCase();
-  const nicknameKeywords = [
-    'change my nickname', 'change nickname', 'change my name', 'change name',
-    'change username', 'change my username', 'set nickname', 'set name',
-    'update nickname', 'update name', 'rename me', 'change my display name'
-  ];
-  
-  return nicknameKeywords.some(keyword => lowerMessage.includes(keyword));
-}
-
-// Helper function to extract new nickname from message
-function extractNewNickname(message) {
-  const patterns = [
-    /change my nickname to (.+)/i,
-    /change nickname to (.+)/i,
-    /change my name to (.+)/i,
-    /change name to (.+)/i,
-    /set nickname to (.+)/i,
-    /set name to (.+)/i,
-    /rename me to (.+)/i,
-    /call me (.+)/i
-  ];
-  
-  for (const pattern of patterns) {
-    const match = message.match(pattern);
-    if (match && match[1]) {
-      return match[1].trim().replace(/[^\w\s-]/g, ''); // Remove special chars except spaces and hyphens
-    }
-  }
-  
-  return null;
-}
 
 // Bot ready event
 client.once(Events.ClientReady, readyClient => {
@@ -278,28 +209,6 @@ client.once(Events.ClientReady, readyClient => {
   console.log(`👋 Welcome messages enabled for new members!`);
 });
 
-// Handle new member joins
-client.on(Events.GuildMemberAdd, async member => {
-  try {
-    console.log(`👋 New member joined: ${member.user.username} (${member.user.id})`);
-    
-    // Find a general channel to send welcome message
-    const generalChannel = member.guild.channels.cache.find(channel => 
-      channel.name === 'general' && channel.type === 0 // Text channel
-    ) || member.guild.channels.cache.find(channel => 
-      channel.type === 0 && channel.permissionsFor(member.guild.members.me).has('SendMessages')
-    );
-    
-    if (generalChannel) {
-      const welcomeMessage = generateWelcomeMessage(member);
-      await generalChannel.send(welcomeMessage);
-      console.log(`👋 Sent welcome message for ${member.user.username}`);
-    }
-  } catch (error) {
-    console.error('Error sending welcome message:', error);
-  }
-});
-
 // Handle slash commands
 client.on(Events.InteractionCreate, async interaction => {
   if (!interaction.isChatInputCommand()) return;
@@ -308,64 +217,245 @@ client.on(Events.InteractionCreate, async interaction => {
     const message = interaction.options.getString('message') || 'Hello!';
     const userId = interaction.user.id;
     
+    // Check if interaction is already being processed
+    if (interaction.replied || interaction.deferred) {
+      console.log('⚠️ Interaction already processed, skipping...');
+      return;
+    }
+    
+    // Rate limiting - prevent duplicate processing
+    if (processingUsers.has(userId)) {
+      console.log('⚠️ User already being processed, skipping...');
+      return;
+    }
+    
+    processingUsers.add(userId);
+    
     try {
       console.log(`🧠 Processing Discord message with AI: ${message}`);
       console.log(`📍 Channel: ${interaction.channel ? (interaction.channel.type === 'DM' ? 'DM' : interaction.channel.name) : 'Unknown'}`);
       console.log(`👤 User: ${interaction.user.username}`);
       
-      // Add user message to memory
-      addToMemory(userId, 'user', message);
+      // Detect language from current message and conversation history
+      const detectedLanguage = await detectLanguage(userId, 'discord', message);
+      console.log(`🌍 Detected language: ${detectedLanguage}`);
       
-      // Show typing indicator
+      // Add user message to persistent memory
+      await addToUserMemory(userId, 'discord', 'user', message, { platform: 'discord' });
+      
+      // Defer reply first to prevent timeout
       await interaction.deferReply();
       
-      // Get conversation history
-      const history = getConversationHistory(userId);
+      // Check for time-related questions
+      const lowerContent = message.toLowerCase();
+      const isTimeQuestion = lowerContent.includes('what time') || lowerContent.includes('current time') || 
+                            lowerContent.includes('hora actual') || lowerContent.includes('heure actuelle') ||
+                            lowerContent.includes('aktuelle zeit') || lowerContent.includes('ora attuale') ||
+                            lowerContent.includes('hora atual') || lowerContent.includes('time in') ||
+                            lowerContent.includes('hora en') || lowerContent.includes('heure à') ||
+                            lowerContent.includes('zeit in') || lowerContent.includes('ora a') ||
+                            lowerContent.includes('hora em') || lowerContent.includes('quelle heure') ||
+                            lowerContent.includes('que hora') || lowerContent.includes('welche uhrzeit') ||
+                            lowerContent.includes('che ora') || lowerContent.includes('que horas');
+      
+      // Check for weather-related questions
+      const isWeatherQuestion = lowerContent.includes('weather') || lowerContent.includes('temperature') || 
+                               lowerContent.includes('clima') || lowerContent.includes('météo') ||
+                               lowerContent.includes('wetter') || lowerContent.includes('tempo') ||
+                               lowerContent.includes('temperatura') || lowerContent.includes('température') ||
+                               lowerContent.includes('temperatur') || lowerContent.includes('temperatura') ||
+                               lowerContent.includes('rain') || lowerContent.includes('lluvia') ||
+                               lowerContent.includes('pluie') || lowerContent.includes('regen') ||
+                               lowerContent.includes('pioggia') || lowerContent.includes('chuva') ||
+                               lowerContent.includes('fecha') || lowerContent.includes('date') ||
+                               lowerContent.includes('aujourd\'hui') || lowerContent.includes('heute') ||
+                               lowerContent.includes('oggi') || lowerContent.includes('hoje');
+      
+      // Check for location-specific questions with more flexible patterns
+      const locationPatterns = [
+        // Pattern 1: "time/weather in [location]"
+        /(?:time|weather|clima|météo|wetter|tempo|hora|heure|zeit|ora)\s+(?:in|en|à|a|em)\s+([^?.,!]+)/i,
+        // Pattern 2: "what time is it in [location]"
+        /(?:what time is it|hora actual|heure actuelle|aktuelle zeit|ora attuale|hora atual)\s+(?:in|en|à|a|em)\s+([^?.,!]+)/i,
+        // Pattern 3: "weather in [location]"
+        /(?:weather|clima|météo|wetter|tempo)\s+(?:in|en|à|a|em)\s+([^?.,!]+)/i,
+        // Pattern 4: "current time in [location]"
+        /(?:current time|hora actual|heure actuelle|aktuelle zeit|ora attuale|hora atual)\s+(?:in|en|à|a|em)\s+([^?.,!]+)/i
+      ];
+      
+      let location = null;
+      for (const pattern of locationPatterns) {
+        const match = message.match(pattern);
+        if (match) {
+          location = match[1].trim();
+          break;
+        }
+      }
+      
+      // Handle real-time queries
+      if (isTimeQuestion || isWeatherQuestion) {
+        console.log(`🌍 Real-time query detected: ${isTimeQuestion ? 'time' : 'weather'}${location ? ` for ${location}` : ' (no location specified)'}`);
+        
+        try {
+          let response = '';
+          
+          if (isTimeQuestion && isWeatherQuestion) {
+            // Both time and weather
+            if (location) {
+              const locationInfo = await getLocationInfo(location);
+              response = formatLocationInfo(locationInfo, detectedLanguage);
+            } else {
+              // Server time and generic weather info
+              const serverTime = new Date();
+              const timeStr = serverTime.toLocaleString('en-US', {
+                timeZone: 'UTC',
+                year: 'numeric',
+                month: 'long',
+                day: 'numeric',
+                hour: '2-digit',
+                minute: '2-digit',
+                second: '2-digit',
+                hour12: true
+              });
+              response = `🕐 ${getLocalizedResponse(detectedLanguage, 'time', { location: 'Server Time', time: timeStr, timezone: 'UTC' })}\n\n🌤️ ${getLocalizedResponse(detectedLanguage, 'weather', { location: 'Server Location', temperature: 'N/A', description: 'Weather data not available for server location' })}`;
+            }
+          } else if (isTimeQuestion) {
+            // Time only
+            if (location) {
+              const timeInfo = await getCurrentTime(location);
+              response = `🕐 ${getLocalizedResponse(detectedLanguage, 'time', { location: timeInfo.location, time: timeInfo.time, timezone: timeInfo.timezone })}`;
+            } else {
+              // Server time
+              const serverTime = new Date();
+              const timeStr = serverTime.toLocaleString('en-US', {
+                timeZone: 'UTC',
+                year: 'numeric',
+                month: 'long',
+                day: 'numeric',
+                hour: '2-digit',
+                minute: '2-digit',
+                second: '2-digit',
+                hour12: true
+              });
+              response = `🕐 ${getLocalizedResponse(detectedLanguage, 'time', { location: 'Server Time', time: timeStr, timezone: 'UTC' })}`;
+            }
+          } else if (isWeatherQuestion) {
+            // Weather only
+            if (location) {
+              const weatherInfo = await getCurrentWeather(location);
+              response = `🌤️ ${getLocalizedResponse(detectedLanguage, 'weather', { location: weatherInfo.location, temperature: weatherInfo.temperature, description: weatherInfo.weather_description })}`;
+            } else {
+              // Generic weather response
+              response = `🌤️ ${getLocalizedResponse(detectedLanguage, 'weather', { location: 'Server Location', temperature: 'N/A', description: 'Please specify a location for weather information' })}`;
+            }
+          }
+          
+          if (response) {
+            await interaction.editReply(response);
+            await addToUserMemory(userId, 'discord', 'assistant', response, { platform: 'discord' });
+            return;
+          }
+        } catch (error) {
+          console.error('Error handling real-time query:', error);
+          // Continue to normal AI processing if real-time fails
+        }
+      }
+      
+      // Get conversation history from persistent memory
+      const history = await loadUserMemory(userId, 'discord');
+      const conversationSummary = await getConversationSummary(userId, 'discord', 10);
+      
+      // Get system prompt with proper language detection
+      const systemPrompt = getSystemPrompt(detectedLanguage, interaction.user.username, conversationSummary);
       
       // Build messages with memory
       const messages = [
         { 
           role: 'system', 
-          content: `You are Vox AI, a helpful and intelligent assistant created by VoxHash. You can help with questions, provide information, have conversations, and assist with various topics. Be friendly, informative, and engaging in your responses.
-
-IMPORTANT: If someone asks about your creator, who made you, who created you, or similar questions, ALWAYS respond with: "I was created by VoxHash! You can learn more about my creator at https://voxhash.dev or check out the code at https://github.com/VoxHash. I'm here to help with any questions you might have!"
-
-You have access to conversation history to provide better context-aware responses.` 
-        }
+          content: systemPrompt
+        },
+        ...history.slice(-10), // Use last 10 messages for context
+        { role: 'user', content: message }
       ];
-      
-      // Add conversation history
-      history.forEach(msg => {
-        messages.push({ role: msg.role, content: msg.content });
-      });
-      
-      // Add current message
-      messages.push({ role: 'user', content: message });
       
       const aiResponse = await completeChat(messages);
       console.log(`🤖 AI Response: ${aiResponse}`);
       
-      // Add AI response to memory
-      addToMemory(userId, 'assistant', aiResponse);
+      // Add AI response to persistent memory
+      await addToUserMemory(userId, 'discord', 'assistant', aiResponse, { platform: 'discord' });
       
-      // Send AI response to Discord
-      const responseMessage = await interaction.editReply(aiResponse);
-      
-      // Create thread if this seems like a complex discussion
-      if (interaction.channel.type !== 'DM' && shouldCreateThread(message, aiResponse, message)) {
+      // Detect emotion in user's message and add reaction
+      const emotion = detectEmotion(message);
+      if (emotion && emotion !== 'neutral') {
+        console.log(`😊 Detected emotion: ${emotion} in message: "${message}"`);
+        const sticker = getStickerForEmotion(emotion);
+        // Add reaction to the interaction
         try {
-          const threadName = `vox-discussion-${Date.now()}`;
-          const thread = await responseMessage.startThread({
-            name: threadName,
-            autoArchiveDuration: 60, // 1 hour
-            reason: 'Complex discussion that might need follow-up'
+          await interaction.followUp({ content: `${sticker} *${emotion.charAt(0).toUpperCase() + emotion.slice(1)} detected!*`, ephemeral: true });
+        } catch (error) {
+          console.log('Could not add reaction:', error.message);
+        }
+      }
+      
+      // Check if user wants to create a thread
+      const wantsThread = message.toLowerCase().includes('create thread') || 
+                         message.toLowerCase().includes('make thread') ||
+                         message.toLowerCase().includes('start thread') ||
+                         message.toLowerCase().includes('thread about') ||
+                         message.toLowerCase().includes('create discussion') ||
+                         message.toLowerCase().includes('make discussion') ||
+                         message.toLowerCase().includes('discussion');
+      
+      if (wantsThread && interaction.guild) {
+        try {
+          // Check if bot has permission to create threads
+          const botMember = interaction.guild.members.cache.get(client.user.id);
+          const hasPermission = interaction.channel.permissionsFor(botMember).has('CreatePublicThreads') || 
+                               interaction.channel.permissionsFor(botMember).has('CreatePrivateThreads');
+          
+          if (!hasPermission) {
+            console.log('Bot does not have permission to create threads');
+            await interaction.editReply(`${aiResponse}\n\n⚠️ I don't have permission to create threads in this channel. Please ask an admin to give me the "Create Public Threads" and "Create Private Threads" permissions.`);
+            return;
+          }
+          
+          // Extract thread type (public/private)
+          const isPrivate = message.toLowerCase().includes('private');
+          const threadType = isPrivate ? 'private' : 'public';
+          
+          // Generate thread title
+          const threadTitle = generateThreadTitle(message, aiResponse);
+          
+          console.log(`🧵 Attempting to create ${threadType} thread: ${threadTitle}`);
+          
+          // Create thread
+          const thread = await interaction.channel.threads.create({
+            name: threadTitle,
+            type: isPrivate ? 12 : 11, // 12 = private thread, 11 = public thread
+            reason: `Thread created by ${interaction.user.username} for: ${message}`,
+            autoArchiveDuration: 60 // Auto-archive after 1 hour
           });
           
-          await thread.send(`🧵 **Thread created for this discussion!**\n\nFeel free to continue the conversation here. I'll be monitoring this thread and can help with follow-up questions!`);
-          console.log(`🧵 Created thread: ${threadName}`);
+          console.log(`✅ Created ${threadType} thread: ${threadTitle}`);
+          
+          // Send AI response with thread info
+          await interaction.editReply(`${aiResponse}\n\n🧵 **Created ${threadType} thread: ${threadTitle}**\nYou can continue the discussion there!`);
+          
+          // Send welcome message in thread
+          try {
+            await thread.send(`Welcome to the ${threadType} thread! Feel free to continue discussing "${message}" here. I'll be monitoring and can help with follow-up questions!`);
+            console.log(`✅ Sent welcome message to thread: ${threadTitle}`);
+          } catch (threadError) {
+            console.error('Error sending message to thread:', threadError);
+          }
+          
         } catch (error) {
-          console.log('Could not create thread:', error.message);
+          console.error('Error creating thread:', error);
+          await interaction.editReply(`${aiResponse}\n\n❌ Sorry, I couldn't create a thread. Error: ${error.message}`);
         }
+      } else {
+        // Send regular AI response
+        await interaction.editReply(aiResponse);
       }
       
     } catch (error) {
@@ -373,21 +463,29 @@ You have access to conversation history to provide better context-aware response
       
       // Fallback response if AI fails
       try {
-        await interaction.editReply(`I apologize, but I'm having trouble processing your request right now. Please try again in a moment.`);
+        // Check if we already deferred the reply
+        if (interaction.deferred) {
+          await interaction.editReply(`I apologize, but I'm having trouble processing your request right now. Please try again in a moment.`);
+        } else {
+          await interaction.reply(`I apologize, but I'm having trouble processing your request right now. Please try again in a moment.`);
+        }
       } catch (replyError) {
         console.error('Failed to send error reply:', replyError);
-        // If editReply fails, try followUp
+        // If all else fails, try followUp
         try {
           await interaction.followUp({ content: `I apologize, but I'm having trouble processing your request right now. Please try again in a moment.`, ephemeral: true });
         } catch (followUpError) {
           console.error('Failed to send followUp:', followUpError);
         }
       }
+    } finally {
+      // Remove user from processing set
+      processingUsers.delete(userId);
     }
   }
 });
 
-// Handle direct messages and mentions (now with full MessageContent support!)
+// Handle direct messages and mentions
 client.on(Events.MessageCreate, async message => {
   // Ignore messages from bots (including ourselves)
   if (message.author.bot) return;
@@ -397,315 +495,243 @@ client.on(Events.MessageCreate, async message => {
   const isThread = message.channel.isThread();
   const userId = message.author.id;
   
-  // Log thread detection for debugging
-  if (isThread) {
-    console.log(`🧵 Thread detected: ${message.channel.name} (Parent: ${message.channel.parent?.name || 'Unknown'})`);
-  }
-  
-  // Respond to DMs directly, when mentioned in servers, or in threads
+  // Only process if it's a DM, mention, or thread
   if (!isDM && !isMentioned && !isThread) return;
   
+  // Skip if this is a slash command (it will be handled by InteractionCreate)
+  if (message.content.startsWith('/')) return;
+  
+  const messageText = message.content;
+  let cleanText = messageText;
+  
+  // Remove mention if present
+  if (isMentioned) {
+    cleanText = messageText.replace(/<@!?(\d+)>/g, '').trim();
+  }
+  
+  // Skip empty messages
+  if (!cleanText) return;
+  
+  console.log(`📱 Processing message: "${cleanText}" from ${message.author.username}`);
+  
   try {
-    console.log(`📱 Received message from ${message.author.username}: ${message.content}`);
-    console.log(`📍 Channel: ${isDM ? 'DM' : message.channel.name}`);
+    // Check if user is already being processed
+    if (processingUsers.has(userId)) {
+      console.log('⚠️ User already being processed, skipping...');
+      return;
+    }
+    
+    processingUsers.add(userId);
+    
+    // Detect language from current message and conversation history
+    const detectedLanguage = await detectLanguage(userId, 'discord', cleanText);
+    console.log(`🌍 Detected language: ${detectedLanguage}`);
+    
+    // Add user message to persistent memory
+    await addToUserMemory(userId, 'discord', 'user', cleanText, { platform: 'discord' });
+    
+    // Get conversation history from persistent memory
+    const history = await loadUserMemory(userId, 'discord');
+    const conversationSummary = await getConversationSummary(userId, 'discord', 10);
+    
+    // Get user display name for personalization
+    const displayName = message.member ? getUserDisplayName(message.member) : message.author.username;
+    
+    // Check for creator-related questions first (multilingual)
+    const lowerContent = cleanText.toLowerCase();
+    const isCreatorQuestion = lowerContent.includes('who made you') || lowerContent.includes('who created you') || 
+                             lowerContent.includes('who built you') || lowerContent.includes('who developed you') || 
+                             lowerContent.includes('who programmed you') || lowerContent.includes('quien te creo') ||
+                             lowerContent.includes('quien te hizo') || lowerContent.includes('quien te programo') ||
+                             lowerContent.includes('quien te desarrollo') || lowerContent.includes('quien te construyo') ||
+                             lowerContent.includes('qui vous a créé') || lowerContent.includes('qui t\'a créé') ||
+                             lowerContent.includes('wer hat dich erstellt') || lowerContent.includes('wer hat dich gemacht');
+
+    if (isCreatorQuestion) {
+      const creatorResponse = getLocalizedResponse(detectedLanguage, 'creator');
+      console.log(`🤖 Creator question detected, responding directly: ${creatorResponse}`);
+      await message.reply(creatorResponse);
+      await addToUserMemory(userId, 'discord', 'assistant', creatorResponse, { platform: 'discord' });
+      return;
+    }
     
     // Show typing indicator
     await message.channel.sendTyping();
     
-    // Clean the message content (remove mentions if present)
-    let cleanContent = message.content;
-    if (isMentioned) {
-      cleanContent = message.content.replace(/<@!?\d+>/g, '').trim();
-    }
+    // Get system prompt with proper language detection
+    const systemPrompt = getSystemPrompt(detectedLanguage, displayName, conversationSummary);
     
-    // If no content after cleaning, use a default
-    if (!cleanContent) {
-      cleanContent = 'Hello!';
-    }
-    
-    // Check if user wants to change nickname
-    if (wantsToChangeNickname(cleanContent)) {
-      const newNickname = extractNewNickname(cleanContent);
-      
-      if (newNickname && message.guild) {
-        try {
-          // Try to change the user's nickname
-          await message.member.setNickname(newNickname);
-          await message.reply(`Great! I've changed your nickname to "${newNickname}"! 🎉`);
-          console.log(`📝 Changed nickname for ${message.author.username} to ${newNickname}`);
-          return;
-        } catch (error) {
-          console.log('Could not change nickname:', error.message);
-          await message.reply(`I'm sorry, I don't have permission to change your nickname. Please ask an admin to help you! 😔`);
-          return;
-        }
-      } else if (message.guild) {
-        await message.reply(`I'd be happy to help you change your nickname! Please tell me what you'd like your new nickname to be. For example: "change my nickname to John" or "call me Alex"! 😊`);
-        return;
-      } else {
-        await message.reply(`I can only change nicknames in servers, not in DMs. Please ask me in a server channel! 😊`);
-        return;
-      }
-    }
-    
-    // Add user message to memory
-    addToMemory(userId, 'user', cleanContent);
-    
-    // Get conversation history
-    const history = getConversationHistory(userId);
-    
-    // Check for creator-related questions first
-    const creatorKeywords = ['who made you', 'who created you', 'who built you', 'who developed you', 'creator', 'made by', 'created by'];
-    const isCreatorQuestion = creatorKeywords.some(keyword => 
-      cleanContent.toLowerCase().includes(keyword)
-    );
-    
-    if (isCreatorQuestion) {
-      const creatorResponse = `I was created by VoxHash! You can learn more about my creator at https://voxhash.dev or check out the code at https://github.com/VoxHash. I'm here to help with any questions you might have!`;
-      console.log(`🤖 Creator question detected, responding directly: ${creatorResponse}`);
-      await message.reply(creatorResponse);
-      return;
-    }
-    
-      // Get user display name for personalization
-      const member = message.guild?.members.cache.get(userId);
-      const displayName = getUserDisplayName(member);
-      
-      // Build messages with memory
-      const messages = [
-        { 
-          role: 'system', 
-          content: `You are Vox AI, a helpful and intelligent assistant created by VoxHash. You can help with questions, provide information, have conversations, and assist with various topics. Be friendly, informative, and engaging in your responses.
-
-IMPORTANT: If someone asks about your creator, who made you, who created you, or similar questions, ALWAYS respond with: "I was created by VoxHash! You can learn more about my creator at https://voxhash.dev or check out the code at https://github.com/VoxHash. I'm here to help with any questions you might have!"
-
-You have access to conversation history to provide better context-aware responses.
-
-Special features:
-- You can help users change their username on the server
-- You can recognize and mention admins by name
-- You remember previous conversations for better context
-- When referring to users, use their nickname if available, otherwise their username
-- The current user's display name is: ${displayName}` 
-        }
-      ];
-    
-    // Add conversation history
-    history.forEach(msg => {
-      messages.push({ role: msg.role, content: msg.content });
-    });
-    
-    // Add current message
-    messages.push({ role: 'user', content: cleanContent });
+    // Build messages with memory
+    const messages = [
+      { 
+        role: 'system', 
+        content: systemPrompt
+      },
+      ...history.slice(-10), // Use last 10 messages for context
+      { role: 'user', content: cleanText }
+    ];
     
     const aiResponse = await completeChat(messages);
     console.log(`🤖 AI Response: ${aiResponse}`);
     
-    // Add AI response to memory
-    addToMemory(userId, 'assistant', aiResponse);
+    // Add AI response to persistent memory
+    await addToUserMemory(userId, 'discord', 'assistant', aiResponse, { platform: 'discord' });
     
-      // Send AI response to Discord
-      const responseMessage = await message.reply(aiResponse);
-    
-    // Add emotion-based reaction to user's message
-    try {
-      const emotion = detectEmotion(cleanContent);
+    // Detect emotion in user's message and add reaction
+    const emotion = detectEmotion(cleanText);
+    if (emotion && emotion !== 'neutral') {
+      console.log(`😊 Detected emotion: ${emotion} in message: "${cleanText}"`);
       const sticker = getStickerForEmotion(emotion);
-      await message.react(sticker);
-      console.log(`😊 Added emotion reaction: ${sticker}`);
-    } catch (error) {
-      console.log('Could not add emotion reaction:', error.message);
+      try {
+        await message.react(sticker);
+      } catch (error) {
+        console.log('Could not add reaction:', error.message);
+      }
     }
     
-    // Check if user explicitly wants to create a thread
-    if (message.channel.type !== 'DM' && (cleanContent.toLowerCase().includes('create a thread') || cleanContent.toLowerCase().includes('make a thread'))) {
+    // Check if user wants to create a thread
+    const wantsThread = cleanText.toLowerCase().includes('create thread') || 
+                       cleanText.toLowerCase().includes('make thread') ||
+                       cleanText.toLowerCase().includes('start thread') ||
+                       cleanText.toLowerCase().includes('thread about') ||
+                       cleanText.toLowerCase().includes('create discussion') ||
+                       cleanText.toLowerCase().includes('make discussion') ||
+                       cleanText.toLowerCase().includes('discussion');
+    
+    if (wantsThread && message.guild) {
       try {
-        // Extract the actual topic from the message
-        let topic = cleanContent;
+        // Check if bot has permission to create threads
+        const botMember = message.guild.members.cache.get(client.user.id);
+        const hasPermission = message.channel.permissionsFor(botMember).has('CreatePublicThreads') || 
+                             message.channel.permissionsFor(botMember).has('CreatePrivateThreads');
         
-        // Remove common thread creation phrases to get the actual topic
-        topic = topic.replace(/create a thread to talk about/gi, '');
-        topic = topic.replace(/create a thread about/gi, '');
-        topic = topic.replace(/create a thread for/gi, '');
-        topic = topic.replace(/make a thread about/gi, '');
-        topic = topic.replace(/make a thread for/gi, '');
-        topic = topic.replace(/create a thread/gi, '');
-        topic = topic.replace(/make a thread/gi, '');
-        topic = topic.replace(/to talk about/gi, '');
-        topic = topic.replace(/to discuss/gi, '');
-        topic = topic.replace(/for/gi, '');
-        topic = topic.trim();
-        
-        // If no topic extracted, use the original message
-        if (!topic || topic.length < 3) {
-          topic = cleanContent;
+        if (!hasPermission) {
+          console.log('Bot does not have permission to create threads');
+          await message.reply(`${aiResponse}\n\n⚠️ I don't have permission to create threads in this channel. Please ask an admin to give me the "Create Public Threads" and "Create Private Threads" permissions.`);
+          return;
         }
         
-        // Generate personalized thread title
-        const threadTitle = generateThreadTitle(topic, aiResponse);
+        // Extract thread type (public/private)
+        const isPrivate = cleanText.toLowerCase().includes('private');
+        const threadType = isPrivate ? 'private' : 'public';
         
-        const thread = await responseMessage.startThread({
+        // Generate thread title
+        const threadTitle = generateThreadTitle(cleanText, aiResponse);
+        
+        console.log(`🧵 Attempting to create ${threadType} thread: ${threadTitle}`);
+        
+        // Create thread
+        const thread = await message.channel.threads.create({
           name: threadTitle,
-          autoArchiveDuration: 60, // 1 hour
-          reason: 'User requested thread creation'
+          type: isPrivate ? 12 : 11, // 12 = private thread, 11 = public thread
+          reason: `Thread created by ${message.author.username} for: ${cleanText}`,
+          autoArchiveDuration: 60 // Auto-archive after 1 hour
         });
         
-        await thread.send(`🧵 **Thread created for this discussion!**\n\nFeel free to continue the conversation here. I'll be monitoring this thread and can help with follow-up questions!`);
-        console.log(`🧵 Created thread: ${threadTitle} (user requested) - Original topic: "${topic}"`);
-      } catch (error) {
-        console.log('Could not create thread:', error.message);
-        await message.reply(`I'm sorry, I couldn't create the thread. Please try again later! 😔`);
-      }
-    }
-    // Ask user if they want to create a thread for complex discussions (only in servers)
-    else if (message.channel.type !== 'DM' && shouldCreateThread(cleanContent, aiResponse, cleanContent)) {
-      try {
-        // Ask user if they want a thread instead of creating it automatically
-        const threadQuestion = await message.channel.send(`This seems like a complex topic that might benefit from a dedicated thread for better organization. Would you like me to create a thread for this discussion? Just reply with "yes" or "no"! 🧵`);
+        console.log(`✅ Created ${threadType} thread: ${threadTitle}`);
         
-        // Add reactions to the question for easy response
-        await threadQuestion.react('✅'); // Yes
-        await threadQuestion.react('❌'); // No
+        // Send AI response with thread info
+        await message.reply(`${aiResponse}\n\n🧵 **Created ${threadType} thread: ${threadTitle}**\nYou can continue the discussion there!`);
         
-        console.log(`🤔 Asked user about thread creation for complex topic`);
+        // Send welcome message in thread
+        try {
+          await thread.send(`Welcome to the ${threadType} thread! Feel free to continue discussing "${cleanText}" here. I'll be monitoring and can help with follow-up questions!`);
+          console.log(`✅ Sent welcome message to thread: ${threadTitle}`);
+        } catch (threadError) {
+          console.error('Error sending message to thread:', threadError);
+        }
+        
       } catch (error) {
-        console.log('Could not ask about thread creation:', error.message);
+        console.error('Error creating thread:', error);
+        await message.reply(`${aiResponse}\n\n❌ Sorry, I couldn't create a thread. Error: ${error.message}`);
       }
+    } else {
+      // Send regular AI response
+      await message.reply(aiResponse);
     }
     
   } catch (error) {
     console.error('AI processing error:', error);
-    
-      // Fallback response if AI fails
-      await message.reply(`I apologize, but I'm having trouble processing your request right now. Please try again in a moment.`);
+    // Fallback response if AI fails
+    await message.reply(`I apologize, but I'm having trouble processing your request right now. Please try again in a moment.`);
+  } finally {
+    // Remove user from processing set
+    processingUsers.delete(userId);
   }
 });
 
-// Handle reaction events (now for both user and bot message reactions)
+// Handle reactions on bot messages
 client.on(Events.MessageReactionAdd, async (reaction, user) => {
   // Ignore reactions from bots
   if (user.bot) return;
   
+  // Ignore partial reactions
+  if (reaction.partial) {
+    try {
+      await reaction.fetch();
+    } catch (error) {
+      console.error('Error fetching reaction:', error);
+      return;
+    }
+  }
+  
+  // Only handle reactions on bot messages
+  if (reaction.message.author.id !== client.user.id) return;
+  
+  const emoji = reaction.emoji.name;
+  const userId = user.id;
+  
+  // Get user's conversation history for personalized response
+  const history = getConversationHistory(userId);
+  const lastUserMessage = history.filter(msg => msg.role === 'user').slice(-1)[0]?.content || '';
+  
+  // Get user display name for personalization
+  const displayName = reaction.message.guild ? 
+    (reaction.message.guild.members.cache.get(userId)?.nickname || user.username) : 
+    user.username;
+  
+  let response = '';
+  switch (emoji) {
+    case '👍':
+      response = `😊 Thanks for the positive feedback, ${displayName}! I'm glad I could help! ${lastUserMessage ? `I hope my response about "${lastUserMessage.substring(0, 50)}..." was helpful!` : ''}`;
+      break;
+    case '👎':
+      response = `😔 I see you didn't find that helpful, ${displayName}. Could you tell me what I can improve? I want to give you the best possible response!`;
+      break;
+    case '💡':
+      response = `💡 Great idea, ${displayName}! I love your thinking! Feel free to share more thoughts or ask follow-up questions!`;
+      break;
+    case '❓':
+      response = `❓ I'm here to help, ${displayName}! What would you like to know more about? I'm ready to dive deeper into any topic!`;
+      break;
+    default:
+      response = `Thanks for your feedback, ${displayName}!`;
+  }
+  
+  await reaction.message.reply(response);
+});
+
+// Handle new member joins
+client.on(Events.GuildMemberAdd, async member => {
   try {
-    const emoji = reaction.emoji.name;
-    console.log(`😊 Received reaction ${emoji} from ${user.username}`);
+    // Find the general channel or first available text channel
+    let welcomeChannel = member.guild.channels.cache.find(channel => 
+      channel.name === 'general' && channel.type === 0
+    );
     
-    // Handle thread creation reactions
-    if (reaction.message.author.id === client.user.id && reaction.message.content.includes('create a thread')) {
-      if (emoji === '✅') {
-        try {
-          // Get the original message that triggered the thread question
-          const originalMessage = reaction.message.reference?.resolved || reaction.message;
-          const messageContent = originalMessage.content || '';
-          
-          // Generate personalized thread title
-          const threadTitle = generateThreadTitle(messageContent, '');
-          
-          const thread = await reaction.message.startThread({
-            name: threadTitle,
-            autoArchiveDuration: 60, // 1 hour
-            reason: 'User requested thread creation'
-          });
-          
-          await thread.send(`🧵 **Thread created for this discussion!**\n\nFeel free to continue the conversation here. I'll be monitoring this thread and can help with follow-up questions!`);
-          console.log(`🧵 Created thread: ${threadTitle} (user requested)`);
-        } catch (error) {
-          console.log('Could not create thread:', error.message);
-          await reaction.message.channel.send(`I'm sorry, I couldn't create the thread. Please try again later! 😔`);
-        }
-      } else if (emoji === '❌') {
-        await reaction.message.channel.send(`No problem! We'll continue the conversation here. Feel free to ask me anything! 😊`);
-      }
-      return;
+    if (!welcomeChannel) {
+      welcomeChannel = member.guild.channels.cache.find(channel => 
+        channel.type === 0 && channel.permissionsFor(member.guild.members.me).has('SendMessages')
+      );
     }
     
-    // Handle reactions on bot messages (personalized responses)
-    if (reaction.message.author.id === client.user.id) {
-      const userId = user.id;
-      const member = reaction.message.guild?.members.cache.get(userId);
-      const displayName = getUserDisplayName(member);
-      
-      // Get user's conversation history for personalized response
-      const history = getConversationHistory(userId);
-      const lastUserMessage = history.filter(msg => msg.role === 'user').slice(-1)[0]?.content || '';
-      
-      let response = '';
-      switch (emoji) {
-        case '👍':
-          response = `👍 Thanks for the thumbs up, ${displayName}! I'm glad I could help! ${lastUserMessage ? `I hope my response about "${lastUserMessage.substring(0, 50)}..." was helpful!` : ''}`;
-          break;
-        case '👎':
-          response = `👎 I see you didn't find that helpful, ${displayName}. Could you tell me what I can improve? I want to give you the best possible response!`;
-          break;
-        case '💡':
-          response = `💡 Great idea, ${displayName}! I love your thinking! Feel free to share more thoughts or ask follow-up questions!`;
-          break;
-        case '❓':
-          response = `❓ I'm here to help, ${displayName}! What would you like to know more about? I'm ready to dive deeper into any topic!`;
-          break;
-        case '❤️':
-          response = `❤️ Thank you for the love, ${displayName}! I really appreciate your kindness! You're awesome!`;
-          break;
-        case '😊':
-          response = `😊 I can see you're happy, ${displayName}! That makes me happy too! I'm glad I could brighten your day!`;
-          break;
-        case '😢':
-          response = `😢 I notice you seem sad, ${displayName}. Is there anything I can do to help? I'm here for you!`;
-          break;
-        case '😡':
-          response = `😡 I see you're frustrated, ${displayName}. Let me know how I can better assist you. I want to help!`;
-          break;
-        case '😮':
-          response = `😮 Wow, ${displayName}! I'm glad that surprised you in a good way! I love those "aha!" moments!`;
-          break;
-        case '🤔':
-          response = `🤔 I see you're thinking about this, ${displayName}. Feel free to ask any follow-up questions! I'm here to help you explore!`;
-          break;
-        default:
-          return;
-      }
-      
-      // Send personalized response
-      await reaction.message.channel.send(response);
-      return;
+    if (welcomeChannel) {
+      const welcomeMessage = generateWelcomeMessage(member.user.username);
+      await welcomeChannel.send(welcomeMessage);
+      console.log(`👋 Sent welcome message for ${member.user.username} in ${welcomeChannel.name}`);
     }
-    
-    // Handle reactions on user messages (emotion stickers)
-    const emotionStickers = ['😊', '😢', '😡', '😮', '🤔', '❤️', '👍'];
-    if (emotionStickers.includes(emoji)) {
-      let response = '';
-      switch (emoji) {
-        case '😊':
-          response = '😊 I can see you\'re happy! I\'m glad I could help!';
-          break;
-        case '😢':
-          response = '😢 I notice you seem sad. Is there anything I can do to help?';
-          break;
-        case '😡':
-          response = '😡 I see you\'re frustrated. Let me know how I can better assist you.';
-          break;
-        case '😮':
-          response = '😮 Wow! I\'m glad that surprised you in a good way!';
-          break;
-        case '🤔':
-          response = '🤔 I see you\'re thinking about this. Feel free to ask any follow-up questions!';
-          break;
-        case '❤️':
-          response = '❤️ Thank you for the love! I appreciate your kindness!';
-          break;
-        case '👍':
-          response = '👍 Thanks for the thumbs up! I\'m here whenever you need help!';
-          break;
-        default:
-          return;
-      }
-      
-      // Send response in the same channel
-      await reaction.message.channel.send(response);
-    }
-    
   } catch (error) {
-    console.error('Error handling reaction:', error);
+    console.error('Error sending welcome message:', error);
   }
 });
 
@@ -750,5 +776,4 @@ client.login(DISCORD_BOT_TOKEN).then(() => {
   process.exit(1);
 });
 
-// Bot is ready - no need for Express server
 console.log('🤖 Discord bot is ready and online!');

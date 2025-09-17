@@ -1,254 +1,162 @@
-# 🤖 Vox AI Chatbot - Discord & Telegram Setup Guide
+# 🚀 Vox AI Chatbot Setup Guide
 
-This guide will walk you through setting up the Vox AI Chatbot for Discord and Telegram platforms.
+## Quick Setup (5 minutes)
 
-## 📋 Prerequisites
-
-- Docker and Docker Compose installed
+### 1. Prerequisites
 - Node.js 18+ installed
-- Discord Developer Account
-- Telegram Bot Token
-- Basic understanding of webhooks and API endpoints
+- Docker & Docker Compose installed
+- Git installed
 
-## 🚀 Step-by-Step Setup
+### 2. Clone and Install
+```bash
+git clone https://github.com/voxhash/vox-ai-chatbot.git
+cd vox-ai-chatbot
+cd backend && npm install
+cd ../frontend && npm install
+```
 
-### Step 1: Environment Configuration
+### 3. Environment Configuration
+```bash
+# Copy the environment template
+cp .env.example .env
 
-1. **Create Environment File**
-   ```bash
-   cp .env.example .env
-   ```
+# Edit with your settings
+nano .env
+```
 
-2. **Edit the `.env` file** with your configuration:
-   ```bash
-   # Database Configuration
-   DATABASE_URL=postgresql://appuser:applongpass@localhost:5433/chatbot
-   REDIS_URL=redis://localhost:6380
+**Required Environment Variables:**
+```env
+# Database
+DATABASE_URL=postgresql://user:password@localhost:5432/vox_chatbot
 
-   # JWT Secrets (generate secure random strings)
-   JWT_ACCESS_SECRET=your-super-secret-access-key-change-in-production
-   JWT_REFRESH_SECRET=your-super-secret-refresh-key-change-in-production
+# AI (choose one)
+OPENAI_API_KEY=your_openai_key
+# OR
+LOCALAI_URL=http://localhost:8080
 
-   # CORS Configuration
-   ALLOWED_ORIGINS=http://localhost:8080,http://localhost:5173
+# Bot Tokens (get from respective platforms)
+DISCORD_BOT_TOKEN=your_discord_token
+TELEGRAM_BOT_TOKEN=your_telegram_token
 
-   # Bot Tokens (REQUIRED for Discord and Telegram)
-   TELEGRAM_BOT_TOKEN=your-telegram-bot-token-here
-   DISCORD_BOT_TOKEN=your-discord-bot-token-here
-   DISCORD_CLIENT_ID=your-discord-client-id-here
-   DISCORD_CLIENT_SECRET=your-discord-client-secret-here
-   DISCORD_PUBLIC_KEY=your-discord-public-key-here
+# Security
+JWT_SECRET=your_random_secret_key
+```
 
-   # Optional: OpenAI API Key
-   OPENAI_API_KEY=your-openai-api-key-here
-   ```
+### 4. Start Services
+```bash
+# Option 1: Docker Compose (Recommended)
+docker-compose up -d
 
-### Step 2: Telegram Bot Setup
+# Option 2: Manual start
+# Terminal 1: Backend
+cd backend && npm start
 
-1. **Create a Telegram Bot**
-   - Open Telegram and search for `@BotFather`
-   - Send `/newbot` command
-   - Follow the prompts to create your bot
-   - Save the bot token you receive
+# Terminal 2: Frontend  
+cd frontend && npm start
 
-2. **Configure Webhook (Optional)**
-   - For production, set up webhook: `https://yourdomain.com/api/telegram/webhook`
-   - For development, we'll use polling (no webhook needed)
+# Terminal 3: Discord Bot
+cd backend && npm run start:discord
 
-3. **Add Bot Token to Environment**
-   ```bash
-   TELEGRAM_BOT_TOKEN=1234567890:ABCdefGHIjklMNOpqrsTUVwxyz
-   ```
+# Terminal 4: Telegram Bot
+cd backend && npm run start:telegram
 
-### Step 3: Discord Bot Setup
+# Terminal 5: WhatsApp Bot
+cd backend && npm run start:whatsapp
+```
 
-1. **Create Discord Application**
-   - Go to [Discord Developer Portal](https://discord.com/developers/applications)
-   - Click "New Application"
-   - Give it a name (e.g., "Vox AI Chatbot")
-   - Save the Application ID (Client ID)
+## 🤖 Bot Setup
 
-2. **Create Bot**
-   - Go to "Bot" section in your application
-   - Click "Add Bot"
-   - Save the bot token
-   - Copy the Public Key from "General Information"
+### Discord Bot Setup
+1. Go to [Discord Developer Portal](https://discord.com/developers/applications)
+2. Create New Application → Bot
+3. Copy Bot Token to `.env`
+4. Enable Intents:
+   - ✅ Guilds
+   - ✅ Guild Messages  
+   - ✅ Direct Messages
+   - ✅ Message Content Intent
+   - ✅ Guild Message Reactions
+   - ✅ Guild Members
+5. Invite bot to server with required permissions
 
-3. **Set Bot Permissions**
-   - Go to "OAuth2" > "URL Generator"
-   - Select scopes: `bot`, `applications.commands`
-   - Select permissions: `Send Messages`, `Use Slash Commands`, `Read Message History`
-   - Copy the generated URL and invite bot to your server
+### Telegram Bot Setup
+1. Message [@BotFather](https://t.me/botfather)
+2. Send `/newbot`
+3. Follow instructions to create bot
+4. Copy token to `.env`
+5. Start bot: `npm run start:telegram`
 
-4. **Register Slash Commands**
-   ```bash
-   # Register the chat command
-   curl -X POST "https://discord.com/api/v10/applications/YOUR_CLIENT_ID/commands" \
-   -H "Authorization: Bot YOUR_BOT_TOKEN" \
-   -H "Content-Type: application/json" \
-   -d '{
-     "name": "chat",
-     "description": "Chat with Vox AI",
-     "options": [
-       {
-         "type": 3,
-         "name": "message",
-         "description": "Your message to the AI",
-         "required": true
-       }
-     ]
-   }'
-   ```
+### WhatsApp Bot Setup
+1. No token needed!
+2. Start bot: `npm run start:whatsapp`
+3. Scan QR code with WhatsApp mobile app
+4. Bot is ready to use
 
-5. **Add Discord Credentials to Environment**
-   ```bash
-   DISCORD_BOT_TOKEN=your-discord-bot-token
-   DISCORD_CLIENT_ID=your-discord-client-id
-   DISCORD_CLIENT_SECRET=your-discord-client-secret
-   DISCORD_PUBLIC_KEY=your-discord-public-key
-   ```
+## 🧪 Testing
 
-### Step 4: Start the Services
+```bash
+# Test all integrations
+cd backend
+npm run test:integration
 
-1. **Start Database and Core Services**
-   ```bash
-   sudo docker-compose up -d db redis
-   ```
-
-2. **Start the Main Application**
-   ```bash
-   sudo docker-compose up -d backend frontend nginx
-   ```
-
-3. **Start Bot Integrations**
-   ```bash
-   # Start Telegram bot
-   cd backend
-   npm run start:telegram &
-
-   # Start Discord bot
-   npm run start:discord &
-   ```
-
-### Step 5: Verify Setup
-
-1. **Check Service Status**
-   ```bash
-   sudo docker-compose ps
-   ```
-
-2. **Test Web Interface**
-   - Open http://localhost:8080
-   - Login with: `test@example.com` / `Passw0rd!`
-
-3. **Test Bot Integrations**
-   ```bash
-   # Run integration tests
-   node scripts/check-modules.js
-   ```
-
-## 🧪 Testing the Bots
-
-### Telegram Testing
-
-1. **Find Your Bot**
-   - Search for your bot username in Telegram
-   - Start a conversation
-
-2. **Send Test Messages**
-   - Send: "Hello, Vox AI!"
-   - Send: "What can you help me with?"
-   - Send: "Tell me a joke"
-
-3. **Expected Response**
-   - Bot should echo your message with "Echo: [your message]"
-
-### Discord Testing
-
-1. **Use Slash Commands**
-   - In your Discord server, type: `/chat message:Hello Vox AI!`
-   - Try: `/chat message:How are you?`
-   - Try: `/chat message:What can you do?`
-
-2. **Expected Response**
-   - Bot should respond with: "🤖 Vox AI: [your message]"
+# Test specific platform
+node scripts/test-location-detection.js
+```
 
 ## 🔧 Troubleshooting
 
 ### Common Issues
 
-1. **Docker Permission Denied**
-   ```bash
-   # Add user to docker group
-   sudo usermod -aG docker $USER
-   # Log out and back in, then try again
-   ```
+**Bot not responding:**
+- Check if bot token is correct
+- Verify intents are enabled (Discord)
+- Check logs: `tail -f logs/discord.log`
 
-2. **Bot Not Responding**
-   - Check if bot token is correct
-   - Verify environment variables are loaded
-   - Check bot logs for errors
+**WhatsApp QR not working:**
+- Delete auth files: `rm -rf backend/auth_info_*`
+- Restart bot: `npm run start:whatsapp`
 
-3. **Database Connection Issues**
-   - Ensure PostgreSQL container is running
-   - Check DATABASE_URL in .env file
-   - Verify database credentials
+**Database connection failed:**
+- Start PostgreSQL: `docker-compose up -d postgres`
+- Check DATABASE_URL in `.env`
 
-4. **Port Conflicts**
-   - Telegram bot uses port 4001
-   - Discord bot uses port 4003
-   - Main app uses port 4000
-   - Web interface uses port 8080
+**AI responses not working:**
+- Verify OPENAI_API_KEY or LOCALAI_URL
+- Check model name in configuration
 
-### Debug Commands
+### Logs Location
+- Discord: `logs/discord.log`
+- Telegram: `logs/telegram.log`  
+- WhatsApp: `logs/whatsapp.log`
 
-```bash
-# Check container logs
-sudo docker-compose logs backend
-sudo docker-compose logs telegram
-sudo docker-compose logs discord
+## 📱 Usage Examples
 
-# Check bot processes
-ps aux | grep -E "(telegram|discord|node)"
-
-# Test API endpoints
-curl http://localhost:4000/api/health
-curl http://localhost:4001/health
-curl http://localhost:4003/discord/health
+### Discord
+```
+/chat Hello Vox!
+/help
 ```
 
-## 📱 Bot Commands
+### Telegram
+```
+@vox What time is it in Tokyo?
+@vox What's the weather in Madrid?
+```
 
-### Telegram Commands
-- Any text message will be processed
-- Bot responds with echo of your message
-- Supports emojis and special characters
+### WhatsApp
+```
+What time is it in New York?
+¿Qué hora es en Barcelona?
+What's the weather in London?
+```
 
-### Discord Commands
-- `/chat message:<your message>` - Chat with the AI
-- Bot responds with AI-generated content
-- Supports rich formatting and mentions
+## 🎯 Next Steps
 
-## 🚀 Production Deployment
-
-For production deployment:
-
-1. **Use Webhooks Instead of Polling**
-2. **Set up SSL certificates**
-3. **Configure proper environment variables**
-4. **Set up monitoring and logging**
-5. **Use a reverse proxy (nginx)**
-6. **Implement rate limiting**
-
-## 📞 Support
-
-If you encounter issues:
-1. Check the logs first
-2. Verify all environment variables
-3. Ensure all services are running
-4. Check network connectivity
-5. Review this guide step by step
+1. **Customize Vox's personality** in `backend/src/lib/language.js`
+2. **Add custom commands** in respective bot files
+3. **Deploy to production** using Docker
+4. **Monitor logs** for any issues
 
 ---
 
-**Happy Chatting! 🤖💬**
+**Need help?** Check the [main README](README.md) or open an issue on GitHub!

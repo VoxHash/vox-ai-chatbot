@@ -1,513 +1,252 @@
-# Vox AI Chatbot 🚀
+# 🤖 Vox AI Chatbot v0.0.2
 
-A modern, full-stack AI chatbot application built with React, Express.js, and PostgreSQL. Real-time chat with AI integration, user authentication, and conversation management with a stunning cyberpunk interface. Powered by Vox 0.0.1, your local AI assistant.
+> **Meet Vox** - A female nerdy AI assistant with goth tendencies and kawaii appearance, created by VoxHash. She's your intelligent companion across Discord, Telegram, and WhatsApp platforms.
 
-[![GitHub stars](https://img.shields.io/github/stars/voxhash/vox-ai-chatbot?style=social)](https://github.com/voxhash/vox-ai-chatbot)
-[![GitHub forks](https://img.shields.io/github/forks/voxhash/vox-ai-chatbot?style=social)](https://github.com/voxhash/vox-ai-chatbot/fork)
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
-[![Node.js](https://img.shields.io/badge/Node.js-18+-green.svg)](https://nodejs.org/)
-[![React](https://img.shields.io/badge/React-18-blue.svg)](https://reactjs.org/)
-
-> **Built with modern web technologies**
-
-## 🎯 Demo
-
-![Vox AI Chatbot Demo](https://via.placeholder.com/800x400/1a1a1a/00ffff?text=Vox+AI+Chatbot+Cyberpunk+Interface)
-
-> **Live Demo**: [Coming Soon] | **Video Demo**: [Watch on YouTube](https://youtube.com/@voxhash)
+[![Version](https://img.shields.io/badge/version-0.0.2-blue.svg)](https://github.com/voxhash/vox-ai-chatbot)
+[![License](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
+[![Node.js](https://img.shields.io/badge/node.js-18+-green.svg)](https://nodejs.org/)
+[![Docker](https://img.shields.io/badge/docker-ready-blue.svg)](https://docker.com/)
 
 ## ✨ Features
 
-- **🤖 AI Chat Integration**: Real-time chat with OpenAI GPT models + Local AI (Vox 0.0.1)
-- **💬 Real-time Messaging**: WebSocket-based instant messaging with typing indicators
-- **🔐 User Authentication**: JWT-based auth with refresh tokens and role-based access
-- **📚 Conversation History**: Persistent chat history with PostgreSQL
-- **👥 Multi-user Support**: User management and conversation isolation
-- **🎨 Cyberpunk UI**: Stunning neon interface with retro vibes
-- **🐳 Docker Support**: Easy deployment with Docker Compose
-- **⚡ Fast & Modern**: Built with the latest web technologies
-- **🔌 Bot Integrations**: Telegram and Slack bot support
-- **📊 Admin Dashboard**: Analytics and user management
-- **🏠 Local AI**: Complete privacy with local model processing
-- **🎯 Smart Responses**: Context-aware AI with code examples
+### 🧠 **Intelligent AI**
+- **Multi-Model Support**: OpenAI GPT, LocalAI, and custom GGUF models
+- **Conversation Memory**: Persistent context across sessions
+- **Multilingual Support**: English, Spanish, French, German, Italian, Portuguese
+- **Emotion Detection**: Responds with appropriate reactions and tone
 
-## 🤖 Meet Vox - Your AI Assistant
+### 🌍 **Real-Time Features**
+- **Time Queries**: Get current time for any location worldwide
+- **Weather Information**: Real-time weather data for any city
+- **Location Detection**: Smart parsing of location names in multiple languages
 
-**Vox 0.0.1** is your local AI assistant powered by advanced language models, providing:
+### 📱 **Multi-Platform Support**
+- **Discord Bot**: Full slash commands, threads, reactions, and nickname management
+- **Telegram Bot**: Group and DM support with inline keyboards
+- **WhatsApp Bot**: QR-based authentication with Baileys integration
 
-- **🧠 Smart Responses**: Context-aware answers with code examples
-- **🏠 Complete Privacy**: All processing happens locally on your machine
-- **⚡ Real-time Processing**: Instant responses with realistic processing time
-- **💻 Code Expertise**: PHP, JavaScript, Python, and more programming languages
-- **🎨 Friendly Interface**: Stunning neon UI with retro vibes
-
-### Example Interactions with Vox:
-
-```
-User: "Give me an example of PHP code"
-Vox: [Provides complete PHP class example with explanations]
-
-User: "What can you do?"
-Vox: [Lists capabilities and programming languages supported]
-
-User: "Hello, how are you?"
-Vox: [Friendly greeting with local processing status]
-```
-
-## 🎯 Why This Project?
-
-I built Vox AI Chatbot to demonstrate:
-
-- **Full-Stack Development Skills**: Modern React frontend with Express.js backend
-- **Real-time Communication**: WebSocket implementation with Socket.IO
-- **Database Design**: Efficient data modeling with PostgreSQL
-- **API Development**: RESTful API design with proper error handling
-- **Authentication**: JWT-based security with refresh tokens
-- **DevOps Practices**: Docker containerization and multi-service orchestration
-- **UI/UX Design**: Responsive, modern interface with Tailwind CSS
-- **Production Readiness**: Proper configuration, documentation, and deployment setup
-
-This project showcases my ability to create **production-ready applications** that solve real-world problems with clean, maintainable code.
-
-## 🛠️ Tech Stack
-
-### Frontend
-- **React 18** - Modern React with hooks
-- **Vite** - Fast build tool and dev server
-- **Tailwind CSS** - Utility-first CSS framework
-- **Socket.IO Client** - Real-time communication
-- **Axios** - HTTP client for API calls
-
-### Backend
-- **Express.js** - Node.js web framework
-- **Socket.IO** - Real-time bidirectional communication
-- **PostgreSQL** - Relational database
-- **Redis** - Caching and session storage
-- **OpenAI API** - AI chat completions
-- **JWT** - Authentication and authorization
-
-### DevOps
-- **Docker** - Containerization
-- **Docker Compose** - Multi-container orchestration
-- **NGINX** - Reverse proxy and load balancing
-
-## 📋 Prerequisites
-
-- Node.js 18+ 
-- Docker and Docker Compose
-- Git
+### 🎭 **Vox's Personality**
+- **Female AI Character**: Nerdy, goth, and kawaii personality
+- **Creator**: VoxHash
+- **Tone**: Intelligent, friendly, with a touch of dark humor
+- **Responses**: Contextual and emotionally aware
 
 ## 🚀 Quick Start
 
-### Option 1: Docker Compose (Recommended)
+### Prerequisites
+- Node.js 18+ 
+- Docker & Docker Compose
+- PostgreSQL database
+- Redis (optional, for caching)
+
+### Installation
 
 1. **Clone the repository**
-   ```bash
-   git clone https://github.com/voxhash/vox-ai-chatbot
-   cd vox-ai-chatbot
-   ```
-
-2. **Create environment file**
 ```bash
-cp .env.example .env
-   # Edit .env with your configuration
-   ```
-
-3. **Start all services**
-   ```bash
-   docker-compose up --build
-   ```
-
-4. **Access Vox AI Chatbot**
-   - Frontend: http://localhost:5173
-   - Backend API: http://localhost:4000
-   - NGINX (production-like): http://localhost:8080
-   - Database: localhost:5433
-
-5. **Login with demo credentials**
-   - Email: `test@example.com`
-   - Password: `Passw0rd!`
-   - AI Assistant: Vox 0.0.1 (Local)
-
-6. **Enable AI responses (optional)**
-   - **OpenAI API**: Add your API key to `.env` file
-   - **Local Models**: Follow the [Local Models Guide](LOCAL_MODELS_INTEGRATION.md)
-   - **Mock Mode**: Works out of the box (default)
-
-### Option 2: Local Development
-
-1. **Clone and setup**
-   ```bash
-   git clone https://github.com/voxhash/vox-ai-chatbot
-   cd vox-ai-chatbot
-   ```
-
-2. **Setup Backend**
-   ```bash
-   cd backend
-   npm install
-   cp ../.env.example ../.env
-   # Edit .env with your configuration
-   npm run dev
-   ```
-
-3. **Setup Frontend**
-   ```bash
-   cd ../frontend
-   npm install
-   npm run dev
-   ```
-
-4. **Access the application**
-   - Frontend: http://localhost:5173
-   - Backend API: http://localhost:4000
-
-5. **Login with demo credentials**
-   - Email: `test@example.com`
-   - Password: `Passw0rd!`
-
-## 📖 API Documentation
-
-### Authentication Endpoints
-
-| Method | Endpoint | Description |
-|--------|----------|-------------|
-| POST | `/api/auth/register` | Register new user |
-| POST | `/api/auth/login` | Login user |
-| POST | `/api/auth/refresh` | Refresh access token |
-
-### Chat Endpoints
-
-| Method | Endpoint | Description |
-|--------|----------|-------------|
-| GET | `/api/chat/conversations` | Get user conversations |
-| POST | `/api/chat/message` | Send message |
-| GET | `/api/chat/admin/metrics` | Get admin metrics |
-
-### WebSocket Events
-
-- `chat:send` - Send a message
-- `chat:message` - Receive a message
-- `chat:typing` - Typing indicators
-- `join` - Join a conversation room
-
-### Example API Usage
-
-**Register User:**
-```bash
-POST /api/auth/register
-Content-Type: application/json
-
-{
-  "email": "user@example.com",
-  "password": "password123"
-}
+git clone https://github.com/voxhash/vox-ai-chatbot.git
+cd vox-ai-chatbot
 ```
 
-**Send Message:**
+2. **Install dependencies**
 ```bash
-POST /api/chat/message
-Authorization: Bearer <access_token>
-Content-Type: application/json
-
-{
-  "message": "Hello, how are you?",
-  "conversationId": 1
-}
-```
-
-## 🗄️ Database Schema
-
-```sql
--- Users table
-CREATE TABLE users (
-  id SERIAL PRIMARY KEY,
-  email TEXT UNIQUE NOT NULL,
-  password_hash TEXT NOT NULL,
-  role TEXT NOT NULL DEFAULT 'user',
-  created_at TIMESTAMP DEFAULT NOW()
-);
-
--- Conversations table
-CREATE TABLE conversations (
-  id SERIAL PRIMARY KEY,
-  user_id INTEGER REFERENCES users(id) ON DELETE CASCADE,
-  title TEXT,
-  created_at TIMESTAMP DEFAULT NOW()
-);
-
--- Messages table
-CREATE TABLE messages (
-  id SERIAL PRIMARY KEY,
-  conversation_id INTEGER REFERENCES conversations(id) ON DELETE CASCADE,
-  sender TEXT NOT NULL, -- 'user' | 'assistant' | 'system'
-  content TEXT NOT NULL,
-  created_at TIMESTAMP DEFAULT NOW()
-);
-```
-
-## 🐳 Docker Configuration
-
-The project includes Docker configuration for easy deployment:
-
-- **PostgreSQL**: Database service with health checks
-- **Redis**: Caching and session storage
-- **Backend**: Express.js API server with Socket.IO
-- **Frontend**: React application with Vite
-- **NGINX**: Reverse proxy for production-like setup
-
-All services are configured with proper networking, volume mounts, and health checks.
-
-## 🧪 Development
-
-### Backend Development
-```bash
+# Backend
 cd backend
-npm run dev          # Start development server
-npm run start        # Start production server
-npm run start:telegram  # Start Telegram bot
-npm run start:slack     # Start Slack bot
-npm test             # Run tests
+npm install
+
+# Frontend
+cd ../frontend
+npm install
 ```
 
-### Frontend Development
+3. **Environment Setup**
 ```bash
-cd frontend
-npm run dev    # Start development server
-npm run build  # Build for production
-npm run preview # Preview production build
+# Copy environment template
+cp .env.example .env
+
+# Edit with your configuration
+nano .env
 ```
 
-## 📁 Project Structure
+4. **Database Setup**
+```bash
+# Start PostgreSQL with Docker
+docker-compose up -d postgres
+
+# Run database migrations
+cd backend
+npm run db:migrate
+```
+
+5. **Start the services**
+```bash
+# Start all services with Docker Compose
+docker-compose up -d
+
+# Or start individually
+npm run start:backend
+npm run start:frontend
+```
+
+## 🤖 Bot Setup
+
+### Discord Bot
+1. Create a Discord application at [Discord Developer Portal](https://discord.com/developers/applications)
+2. Enable required intents: `Guilds`, `GuildMessages`, `DirectMessages`, `MessageContent`, `GuildMessageReactions`, `GuildMembers`
+3. Add bot token to `.env` file
+4. Start the bot: `npm run start:discord`
+
+### Telegram Bot
+1. Create a bot with [@BotFather](https://t.me/botfather)
+2. Get bot token and add to `.env` file
+3. Start the bot: `npm run start:telegram`
+
+### WhatsApp Bot
+1. No token needed - uses QR code authentication
+2. Start the bot: `npm run start:whatsapp`
+3. Scan QR code with WhatsApp mobile app
+4. Bot will be ready for use
+
+## 📖 Usage
+
+### Discord Commands
+- `/chat <message>` - Chat with Vox
+- `/help` - Show available commands
+- React to messages for personalized responses
+- Vox can create and manage threads
+- Nickname management for users
+
+### Telegram Features
+- Send messages to Vox in DMs or groups
+- Use `@vox` to mention in groups
+- Inline keyboard interactions
+- Reaction-based responses
+
+### WhatsApp Features
+- Send messages directly to the bot
+- Mention `@vox` in group chats
+- Real-time queries for time and weather
+- Multilingual support
+
+## 🛠️ Configuration
+
+### Environment Variables
+```env
+# Database
+DATABASE_URL=postgresql://user:password@localhost:5432/vox_chatbot
+
+# AI Models
+OPENAI_API_KEY=your_openai_key
+LOCALAI_URL=http://localhost:8080
+MODEL_NAME=vox_legacy
+
+# Bot Tokens
+DISCORD_BOT_TOKEN=your_discord_token
+TELEGRAM_BOT_TOKEN=your_telegram_token
+
+# Redis (optional)
+REDIS_URL=redis://localhost:6379
+
+# Security
+JWT_SECRET=your_jwt_secret
+BCRYPT_ROUNDS=12
+```
+
+### Model Configuration
+- **OpenAI**: Set `OPENAI_API_KEY` and `MODEL_NAME`
+- **LocalAI**: Set `LOCALAI_URL` and `MODEL_NAME`
+- **GGUF Models**: Place `.gguf` files in `models/` directory
+
+## 🏗️ Architecture
 
 ```
-ai-chatbot/
-├── backend/
+vox-ai-chatbot/
+├── backend/                 # Node.js backend
 │   ├── src/
-│   │   ├── ai/
-│   │   │   └── openai.js          # AI integration
-│   │   ├── integrations/
-│   │   │   ├── slack.js           # Slack bot
-│   │   │   └── telegram.js        # Telegram bot
-│   │   ├── lib/
-│   │   │   ├── db.js              # Database connection
-│   │   │   └── redis.js           # Redis connection
-│   │   ├── middleware/
-│   │   │   └── auth.js            # Authentication middleware
-│   │   ├── routes/
-│   │   │   ├── auth.js            # Auth routes
-│   │   │   └── chat.js            # Chat routes
-│   │   ├── sockets/
-│   │   │   └── chat.js            # Socket.IO handlers
-│   │   └── index.js               # Express server
-│   ├── Dockerfile
+│   │   ├── ai/             # AI model integrations
+│   │   ├── integrations/   # Bot integrations
+│   │   ├── lib/            # Utility libraries
+│   │   ├── routes/         # API routes
+│   │   └── tests/          # Test files
 │   └── package.json
-├── frontend/
+├── frontend/               # React frontend
 │   ├── src/
-│   │   ├── App.jsx                # Main app component
-│   │   ├── main.jsx               # App entry point
-│   │   └── index.css              # Global styles
-│   ├── index.html
-│   ├── Dockerfile
 │   └── package.json
-├── nginx/
-│   └── nginx.conf                 # NGINX configuration
-├── scripts/
-│   └── seed.sql                   # Database seed data
-├── docker-compose.yml
+├── models/                 # AI model files
+├── scripts/               # Utility scripts
+├── docker-compose.yml     # Docker configuration
 └── README.md
 ```
 
-## 🔧 Environment Variables
-
-### Backend (.env)
-```
-DATABASE_URL=postgresql://appuser:applongpass@localhost:5433/chatbot
-REDIS_URL=redis://localhost:6380/0
-JWT_ACCESS_SECRET=your-super-secret-access-key
-JWT_REFRESH_SECRET=your-super-secret-refresh-key
-OPENAI_API_KEY=your-openai-api-key
-ALLOWED_ORIGINS=http://localhost:5173,http://localhost:8080
-TELEGRAM_BOT_TOKEN=your-telegram-bot-token
-SLACK_BOT_TOKEN=your-slack-bot-token
-SLACK_SIGNING_SECRET=your-slack-signing-secret
-```
-
-### Frontend (.env)
-```
-VITE_API_URL=http://localhost:4000
-```
-
-## 🚀 Deployment
-
-### Production with Docker
-
-1. **Build and start services**
-   ```bash
-   docker-compose -f docker-compose.yml up --build -d
-   ```
-
-2. **Run database migrations**
-   ```bash
-   docker-compose exec db psql -U appuser -d chatbot -f /docker-entrypoint-initdb.d/seed.sql
-   ```
-
-### Manual Deployment
-
-1. **Setup database** (PostgreSQL)
-2. **Deploy backend** (Node.js/Express)
-3. **Deploy frontend** (React/Vite)
-4. **Configure environment variables**
-5. **Setup NGINX** (optional)
-
-## 🔧 Troubleshooting
-
-### Common Issues and Solutions
-
-#### Database Connection Error (`ECONNREFUSED ::1:5433`)
-**Problem**: The application can't connect to the database.
-**Solution**: Ensure the `DATABASE_URL` in your `.env` file uses the correct Docker service name:
-```bash
-# For Docker Compose
-DATABASE_URL=postgresql://appuser:applongpass@db:5432/chatbot
-
-# For local development
-DATABASE_URL=postgresql://appuser:applongpass@localhost:5433/chatbot
-```
-
-#### Redis Connection Error (`ECONNREFUSED 127.0.0.1:6380`)
-**Problem**: The application can't connect to Redis.
-**Solution**: Update the `REDIS_URL` in your `.env` file:
-```bash
-# For Docker Compose
-REDIS_URL=redis://redis:6379/0
-
-# For local development
-REDIS_URL=redis://localhost:6380/0
-```
-
-#### Login Fails with "Invalid credentials"
-**Problem**: The demo user login doesn't work.
-**Solution**: The password hash in the database might be incorrect. Update it:
-```bash
-# Generate new password hash
-docker-compose exec backend node -e "const bcrypt = require('bcrypt'); console.log(bcrypt.hashSync('Passw0rd!', 10));"
-
-# Update database with new hash
-docker-compose exec db psql -U appuser -d chatbot -c "UPDATE users SET password_hash = 'NEW_HASH_HERE' WHERE email = 'test@example.com';"
-```
-
-#### Frontend Not Accessible via NGINX
-**Problem**: NGINX shows "host not allowed" error.
-**Solution**: The Vite configuration needs to allow the frontend host. This is already fixed in the current configuration.
-
-#### Services Not Starting
-**Problem**: Docker containers fail to start.
-**Solution**: 
-1. Check if all required environment variables are set in `.env`
-2. Ensure ports 4000, 5173, 5433, 6380, and 8080 are available
-3. Check Docker logs: `docker-compose logs [service-name]`
-
-### Health Checks
-
-Test if all services are running correctly:
+## 🧪 Testing
 
 ```bash
-# Check backend health
-curl http://localhost:4000/api/health
+# Run all tests
+npm test
 
-# Check frontend
-curl http://localhost:5173
+# Run integration tests
+npm run test:integration
 
-# Check NGINX proxy
-curl http://localhost:8080
-
-# Test login
-curl -X POST http://localhost:4000/api/auth/login \
-  -H "Content-Type: application/json" \
-  -d '{"email":"test@example.com","password":"Passw0rd!"}'
+# Run with coverage
+npm run test:coverage
 ```
 
-## 🤝 Contributing
+## 📚 API Documentation
 
-Contributions are welcome! Here's how you can contribute:
+### Chat Endpoint
+```http
+POST /api/chat
+Content-Type: application/json
 
-1. **Fork the repository**
-2. **Create a feature branch** (`git checkout -b feature/amazing-feature`)
-3. **Commit your changes** (`git commit -m 'Add some amazing feature'`)
-4. **Push to the branch** (`git push origin feature/amazing-feature`)
-5. **Open a Pull Request**
+{
+  "message": "Hello Vox!",
+  "platform": "discord",
+  "userId": "user123"
+}
+```
 
-### Development Guidelines
-- Follow the existing code style
-- Add tests for new features
-- Update documentation as needed
-- Ensure all checks pass
+### Real-time Queries
+- **Time**: "What time is it in Tokyo?"
+- **Weather**: "What's the weather in Madrid?"
+- **Multilingual**: "¿Qué hora es en Barcelona?"
 
-### Ideas for Contributions
-- Add more AI providers (Anthropic, Cohere, etc.)
-- Implement file upload for chat
-- Add voice message support
-- Create mobile app version
-- Add conversation export/import
-- Implement user roles and permissions
+## 🔧 Development
+
+### Adding New Platforms
+1. Create integration file in `backend/src/integrations/`
+2. Implement required methods: `sendMessage`, `handleMessage`
+3. Add platform-specific configuration
+4. Update environment variables
+
+### Customizing Vox's Personality
+Edit the system prompts in `backend/src/lib/language.js` to modify Vox's responses and personality traits.
 
 ## 📄 License
 
 This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
 
-## 🤖 AI Integration Options
+## 👥 Contributing
 
-### OpenAI API Integration
-For production use with real AI capabilities:
-- **Guide**: [OPENAI_INTEGRATION.md](OPENAI_INTEGRATION.md)
-- **Features**: GPT-4, GPT-3.5-turbo, GPT-4o-mini
-- **Cost**: Pay-per-use
-- **Setup**: 5 minutes
+1. Fork the repository
+2. Create a feature branch
+3. Make your changes
+4. Add tests if applicable
+5. Submit a pull request
 
-### Local Models Integration
-For complete privacy and control:
-- **Guide**: [LOCAL_MODELS_INTEGRATION.md](LOCAL_MODELS_INTEGRATION.md)
-- **Your GGUF Model**: [GGUF_MODEL_INTEGRATION.md](GGUF_MODEL_INTEGRATION.md)
-- **Features**: Llama 3.2, Mistral, CodeLlama, and more
-- **Cost**: Free (after initial setup)
-- **Setup**: 15-30 minutes
+## 🆘 Support
 
-### Mock Mode (Default)
-For development and testing:
-- **Features**: Echo responses
-- **Cost**: Free
-- **Setup**: Automatic
+- **Issues**: [GitHub Issues](https://github.com/voxhash/vox-ai-chatbot/issues)
+- **Discussions**: [GitHub Discussions](https://github.com/voxhash/vox-ai-chatbot/discussions)
+- **Creator**: VoxHash
 
-## 🎯 Future Enhancements
+## 🙏 Acknowledgments
 
-- [ ] Voice message support
-- [ ] File upload and sharing
-- [ ] Multiple AI providers
-- [ ] Conversation export/import
-- [ ] Advanced user roles
-- [ ] Real-time collaboration
-- [ ] Mobile app (React Native)
-- [ ] Analytics dashboard
-- [ ] Custom AI model training
-
-## 📞 Connect with Me
-
-- **GitHub**: [@voxhash](https://github.com/voxhash)
-- **Email**: [Get in touch](mailto:contact@voxhash.dev)
-
-## 🌟 Star History
-
-[![Star History Chart](https://api.star-history.com/svg?repos=voxhash/ai-chatbot&type=Date)](https://star-history.com/#voxhash/ai-chatbot&Date)
+- OpenAI for GPT models
+- Discord.js for Discord integration
+- Baileys for WhatsApp integration
+- The open-source community
 
 ---
 
-<div align="center">
+**Made with ❤️ by VoxHash for the AI community**
 
-**Built with ❤️ by [@VoxHash](https://github.com/voxhash)**
-
-*Full-Stack Developer | AI & Web Technologies*
-
-[![GitHub followers](https://img.shields.io/github/followers/voxhash?style=social)](https://github.com/voxhash)
-
-</div>
+*Vox is always ready to help, whether you need information, want to chat, or just need someone to understand your nerdy references!* 🤖✨

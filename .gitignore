@@ -4,78 +4,49 @@ npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
 
-# Environment variables
+# Environment variables (CRITICAL - contains sensitive data)
 .env
 .env.local
 .env.development.local
 .env.test.local
 .env.production.local
+.env.example
 
-# Logs
-logs
+# Logs and runtime data
+logs/
 *.log
-
-# Runtime data
-pids
+pids/
 *.pid
 *.seed
 *.pid.lock
 
-# Coverage directory used by tools like istanbul
+# Coverage and testing
 coverage/
-
-# nyc test coverage
 .nyc_output
+test-results/
 
-# Dependency directories
-node_modules/
-jspm_packages/
+# Build outputs
+dist/
+build/
+.next/
+.nuxt/
+.vuepress/dist/
 
-# Optional npm cache directory
-.npm
-
-# Optional REPL history
-.node_repl_history
-
-# Output of 'npm pack'
-*.tgz
-
-# Yarn Integrity file
-.yarn-integrity
-
-# dotenv environment variables file
-.env
-
-# next.js build output
-.next
-
-# Nuxt.js build output
-.nuxt
-
-# vuepress build output
-.vuepress/dist
-
-# Serverless directories
-.serverless
-
-# FuseBox cache
+# Cache directories
+.npm/
+.yarn/
+.cache/
 .fusebox/
+.serverless/
 
-# DynamoDB Local files
-.dynamodb/
-
-# TernJS port file
-.tern-port
-
-# Stores VSCode versions used for testing VSCode extensions
-.vscode-test
-
-# IDE files
+# IDE and editor files
 .vscode/
 .idea/
 *.swp
 *.swo
 *~
+.project
+.settings/
 
 # OS generated files
 .DS_Store
@@ -85,24 +56,22 @@ jspm_packages/
 .Trashes
 ehthumbs.db
 Thumbs.db
+desktop.ini
 
-# Docker
-.dockerignore
-
-# Database
+# Database files
 *.db
 *.sqlite
 *.sqlite3
+*.sql.backup
+*.db.backup
+database_backup/
 
 # Temporary files
 tmp/
 temp/
+.tmp/
 
-# Build outputs
-dist/
-build/
-
-# AI Models (keep the directory but ignore large model files)
+# AI Models (large files - keep structure but ignore binaries)
 models/*.gguf
 models/*.bin
 models/*.safetensors
@@ -111,13 +80,71 @@ models/*.pth
 models/*.ckpt
 models/*.h5
 models/*.onnx
+models/*.pkl
+models/*.joblib
 
-# But keep model configuration files
+# Keep model configuration files
 !models/*.yaml
 !models/*.yml
 !models/*.json
 !models/*.txt
 !models/*.md
-
-# Keep the models directory structure
 !models/.gitkeep
+
+# WhatsApp authentication data (SENSITIVE)
+backend/auth_info_*/
+backend/.wwebjs_auth/
+backend/.wwebjs_cache/
+backend/auth_info_*
+.wwebjs_auth/
+.wwebjs_cache/
+
+# Bot tokens and credentials (SENSITIVE)
+*_bot_token.txt
+*_credentials.json
+*_secrets.json
+*_token.txt
+*_key.txt
+*_secret.txt
+credentials/
+secrets/
+tokens/
+
+# Memory and user data (SENSITIVE)
+backend/memory/
+memory/
+user_data/
+conversations/
+
+# QR Code images (temporary)
+*.png
+*.jpg
+*.jpeg
+*.gif
+!docs/images/
+!assets/images/
+
+# Docker
+.dockerignore
+docker-compose.override.yml
+
+# Backup files
+*.backup
+*.bak
+*.old
+*.orig
+
+# Lock files (keep package-lock.json but ignore others)
+yarn.lock
+pnpm-lock.yaml
+
+# Runtime and process files
+*.pid
+*.seed
+*.pid.lock
+.pid
+
+# Local development
+.local/
+local/
+dev/

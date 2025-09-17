@@ -79,20 +79,41 @@ const createDiscordApp = () => {
   return app;
 };
 
+const createWhatsAppApp = () => {
+  const app = express();
+  app.use(express.json());
+  
+  app.post('/whatsapp/webhook', async (req, res) => {
+    const { message } = req.body;
+    const chatId = message?.chat?.id;
+    const text = message?.text || '';
+    
+    if (chatId) {
+      console.log(`WhatsApp: ${text} from chat ${chatId}`);
+    }
+    
+    res.sendStatus(200);
+  });
+  
+  return app;
+};
+
 describe('Multi-Platform Bot Integration Tests', () => {
-  let telegramApp, slackApp, discordApp;
-  let telegramServer, slackServer, discordServer;
+  let telegramApp, slackApp, discordApp, whatsappApp;
+  let telegramServer, slackServer, discordServer, whatsappServer;
   
   beforeAll(() => {
-    // Initialize all three apps
+    // Initialize all four apps
     telegramApp = createTelegramApp();
     slackApp = createSlackApp();
     discordApp = createDiscordApp();
+    whatsappApp = createWhatsAppApp();
     
     // Start servers on different ports
     telegramServer = telegramApp.listen(4001);
     slackServer = slackApp.listen(4002);
     discordServer = discordApp.listen(4003);
+    whatsappServer = whatsappApp.listen(4004);
   });
   
   afterAll((done) => {
@@ -100,7 +121,8 @@ describe('Multi-Platform Bot Integration Tests', () => {
     Promise.all([
       new Promise(resolve => telegramServer.close(resolve)),
       new Promise(resolve => slackServer.close(resolve)),
-      new Promise(resolve => discordServer.close(resolve))
+      new Promise(resolve => discordServer.close(resolve)),
+      new Promise(resolve => whatsappServer.close(resolve))
     ]).then(() => done());
   });
   
@@ -145,13 +167,25 @@ describe('Multi-Platform Bot Integration Tests', () => {
             channel_id: '987654321'
           },
           endpoint: '/discord/interactions'
+        },
+        // WhatsApp
+        {
+          platform: 'whatsapp',
+          payload: {
+            message: {
+              chat: { id: '1234567890@c.us' },
+              text: 'Hello from WhatsApp!'
+            }
+          },
+          endpoint: '/whatsapp/webhook'
         }
       ];
       
       // Send all messages concurrently
       const promises = testMessages.map(({ platform, payload, endpoint }) => {
         const app = platform === 'telegram' ? telegramApp : 
-                   platform === 'slack' ? slackApp : discordApp;
+                   platform === 'slack' ? slackApp : 
+                   platform === 'discord' ? discordApp : whatsappApp;
         
         return request(app)
           .post(endpoint)
@@ -227,7 +261,7 @@ describe('Multi-Platform Bot Integration Tests', () => {
         expect(response.status).toBe(200);
       });
       
-      expect(responses.length).toBe(messageCount * 3); // 3 platforms
+      expect(responses.length).toBe(messageCount * 4); // 4 platforms
     });
   });
   
@@ -326,6 +360,30 @@ describe('Multi-Platform Bot Integration Tests', () => {
         expect(response.status).toBe(200);
       }
     });
+    
+    it('should handle WhatsApp-specific message types', async () => {
+      const whatsappMessages = [
+        { text: 'Regular message' },
+        { text: 'Message with emoji 🚀' },
+        { text: 'Message with special chars: @#$%^&*()' },
+        { text: '' }, // Empty message
+        { text: 'Very long message '.repeat(100) }
+      ];
+      
+      for (const message of whatsappMessages) {
+        const response = await request(whatsappApp)
+          .post('/whatsapp/webhook')
+          .send({
+            message: {
+              chat: { id: '1234567890@c.us' },
+              text: message.text
+            }
+          })
+          .expect(200);
+        
+        expect(response.status).toBe(200);
+      }
+    });
   });
   
   describe('Error Handling', () => {
@@ -339,7 +397,10 @@ describe('Multi-Platform Bot Integration Tests', () => {
         { app: slackApp, endpoint: '/slack/events', payload: { event: {} } },
         // Discord
         { app: discordApp, endpoint: '/discord/interactions', payload: {} },
-        { app: discordApp, endpoint: '/discord/interactions', payload: { type: 999 } }
+        { app: discordApp, endpoint: '/discord/interactions', payload: { type: 999 } },
+        // WhatsApp
+        { app: whatsappApp, endpoint: '/whatsapp/webhook', payload: {} },
+        { app: whatsappApp, endpoint: '/whatsapp/webhook', payload: { message: {} } }
       ];
       
       for (const { app, endpoint, payload } of malformedRequests) {

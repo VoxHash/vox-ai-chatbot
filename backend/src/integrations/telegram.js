@@ -2,6 +2,16 @@ import 'dotenv/config';
 import express from 'express';
 import fetch from 'node-fetch';
 import { completeChat } from '../ai/openai.js';
+import { 
+  loadUserMemory, 
+  addToUserMemory, 
+  getConversationSummary, 
+  detectLanguage, 
+  hasUserBeenGreeted,
+  getUserPreferredLanguage 
+} from '../lib/memory.js';
+import { getLocalizedResponse, getSystemPrompt } from '../lib/language.js';
+import { getCurrentTime, getCurrentWeather, getLocationInfo, formatLocationInfo } from '../lib/realtime.js';
 
 const token = process.env.TELEGRAM_BOT_TOKEN;
 if (!token) {
@@ -16,31 +26,8 @@ const api = `https://api.telegram.org/bot${token}`;
 // Store last update ID to avoid processing the same message twice
 let lastUpdateId = 0;
 
-// Memory system for conversation context
-const conversationMemory = new Map();
-const MAX_MEMORY_SIZE = 10; // Keep last 10 messages per user
-
-// Helper function to get conversation history
-function getConversationHistory(userId) {
-  return conversationMemory.get(userId) || [];
-}
-
-// Helper function to add message to memory
-function addToMemory(userId, role, content) {
-  if (!conversationMemory.has(userId)) {
-    conversationMemory.set(userId, []);
-  }
-  
-  const history = conversationMemory.get(userId);
-  history.push({ role, content, timestamp: Date.now() });
-  
-  // Keep only last MAX_MEMORY_SIZE messages
-  if (history.length > MAX_MEMORY_SIZE) {
-    history.splice(0, history.length - MAX_MEMORY_SIZE);
-  }
-  
-  conversationMemory.set(userId, history);
-}
+// Processing users to prevent duplicate processing
+const processingUsers = new Set();
 
 // Helper function to detect emotions in user messages
 function detectEmotion(text) {
@@ -200,7 +187,7 @@ async function getUpdates() {
               console.log(`😊 Received callback from ${username}: ${data}`);
               
               // Get user's conversation history for personalized response
-              const history = getConversationHistory(userId);
+              const history = await loadUserMemory(userId, 'telegram');
               const lastUserMessage = history.filter(msg => msg.role === 'user').slice(-1)[0]?.content || '';
               
               // Get user display name for personalization
@@ -250,9 +237,21 @@ async function getUpdates() {
               if (message.new_chat_members && message.new_chat_members.length > 0) {
                 for (const newMember of message.new_chat_members) {
                   if (!newMember.is_bot) { // Only welcome human users, not bots
-                    const welcomeMessage = generateWelcomeMessage(newMember);
-                    await sendMessage(chatId, welcomeMessage);
-                    console.log(`👋 Sent welcome message for ${newMember.first_name || newMember.username}`);
+                    const userId = newMember.id;
+                    
+                    // Check if user has been greeted before
+                    if (!(await hasUserBeenGreeted(userId, 'telegram'))) {
+                      const welcomeMessage = generateWelcomeMessage(newMember);
+                      await sendMessage(chatId, welcomeMessage);
+                      
+                      // Mark user as greeted
+                      await addToUserMemory(userId, 'telegram', 'system', 'User joined group and was welcomed', { 
+                        platform: 'telegram',
+                        action: 'welcome'
+                      });
+                      
+                      console.log(`👋 Sent welcome message for ${newMember.first_name || newMember.username}`);
+                    }
                   }
                 }
                 continue; // Skip normal message processing for member joins
@@ -300,64 +299,181 @@ async function getUpdates() {
                   console.log(`📱 Processing message: "${cleanText}"`);
                   
                   if (cleanText) {
-                    // Add user message to memory
-                    addToMemory(message.from.id, 'user', cleanText);
+                    const userId = message.from.id;
                     
-                    // Get conversation history
-                    const history = getConversationHistory(message.from.id);
-                    
-                    // Get user display name for personalization
-                    const displayName = getUserDisplayName(message.from);
-                    
-                    // Check for creator-related questions first
-                    const creatorKeywords = ['who made you', 'who created you', 'who built you', 'who developed you', 'creator', 'made by', 'created by'];
-                    const isCreatorQuestion = creatorKeywords.some(keyword => 
-                      cleanText.toLowerCase().includes(keyword)
-                    );
-                    
-                    if (isCreatorQuestion) {
-                      const creatorResponse = `I was created by VoxHash! You can learn more about my creator at https://voxhash.dev or check out the code at https://github.com/VoxHash. I'm here to help with any questions you might have!`;
-                      console.log(`🤖 Creator question detected, responding directly: ${creatorResponse}`);
-                      await sendMessage(chatId, creatorResponse, true);
+                    // Check if user is already being processed
+                    if (processingUsers.has(userId)) {
+                      console.log('⚠️ User already being processed, skipping...');
                       return;
                     }
                     
-                    // Use AI model to generate response
+                    processingUsers.add(userId);
+                    
                     try {
-                      console.log(`🧠 Processing message with AI: ${cleanText}`);
+                      // Detect language from current message and conversation history
+                      const detectedLanguage = await detectLanguage(userId, 'telegram', cleanText);
+                      console.log(`🌍 Detected language: ${detectedLanguage}`);
+                      
+                      // Add user message to persistent memory
+                      await addToUserMemory(userId, 'telegram', 'user', cleanText, { platform: 'telegram' });
+                      
+                      // Get conversation history from persistent memory
+                      const history = await loadUserMemory(userId, 'telegram');
+                      const conversationSummary = await getConversationSummary(userId, 'telegram', 10);
+                      
+                      // Get user display name for personalization
+                      const displayName = getUserDisplayName(message.from);
+                      
+                      // Check for creator-related questions first (multilingual)
+                      const lowerContent = cleanText.toLowerCase();
+                      const isCreatorQuestion = lowerContent.includes('who made you') || lowerContent.includes('who created you') || 
+                                               lowerContent.includes('who built you') || lowerContent.includes('who developed you') || 
+                                               lowerContent.includes('who programmed you') || lowerContent.includes('quien te creo') ||
+                                               lowerContent.includes('quien te hizo') || lowerContent.includes('quien te programo') ||
+                                               lowerContent.includes('quien te desarrollo') || lowerContent.includes('quien te construyo') ||
+                                               lowerContent.includes('qui vous a créé') || lowerContent.includes('qui t\'a créé') ||
+                                               lowerContent.includes('wer hat dich erstellt') || lowerContent.includes('wer hat dich gemacht');
+                      
+                      if (isCreatorQuestion) {
+                        const creatorResponse = getLocalizedResponse(detectedLanguage, 'creator');
+                        console.log(`🤖 Creator question detected, responding directly: ${creatorResponse}`);
+                        await sendMessage(chatId, creatorResponse, true);
+                        await addToUserMemory(userId, 'telegram', 'assistant', creatorResponse, { platform: 'telegram' });
+                        return;
+                      }
+                      
+                      // Check for time-related questions
+                      const isTimeQuestion = lowerContent.includes('what time') || lowerContent.includes('current time') || 
+                                            lowerContent.includes('hora actual') || lowerContent.includes('heure actuelle') ||
+                                            lowerContent.includes('aktuelle zeit') || lowerContent.includes('ora attuale') ||
+                                            lowerContent.includes('hora atual') || lowerContent.includes('time in') ||
+                                            lowerContent.includes('hora en') || lowerContent.includes('heure à') ||
+                                            lowerContent.includes('zeit in') || lowerContent.includes('ora a') ||
+                                            lowerContent.includes('hora em') || lowerContent.includes('quelle heure') ||
+                                            lowerContent.includes('que hora') || lowerContent.includes('welche uhrzeit') ||
+                                            lowerContent.includes('che ora') || lowerContent.includes('que horas');
+                      
+                      // Check for weather-related questions
+                      const isWeatherQuestion = lowerContent.includes('weather') || lowerContent.includes('temperature') || 
+                                               lowerContent.includes('clima') || lowerContent.includes('météo') ||
+                                               lowerContent.includes('wetter') || lowerContent.includes('tempo') ||
+                                               lowerContent.includes('temperatura') || lowerContent.includes('température') ||
+                                               lowerContent.includes('temperatur') || lowerContent.includes('temperatura') ||
+                                               lowerContent.includes('rain') || lowerContent.includes('lluvia') ||
+                                               lowerContent.includes('pluie') || lowerContent.includes('regen') ||
+                                               lowerContent.includes('pioggia') || lowerContent.includes('chuva') ||
+                                               lowerContent.includes('fecha') || lowerContent.includes('date') ||
+                                               lowerContent.includes('aujourd\'hui') || lowerContent.includes('heute') ||
+                                               lowerContent.includes('oggi') || lowerContent.includes('hoje');
+                      
+                      // Check for location-specific questions with more flexible patterns
+                      const locationPatterns = [
+                        // Pattern 1: "time/weather in [location]"
+                        /(?:time|weather|clima|météo|wetter|tempo|hora|heure|zeit|ora)\s+(?:in|en|à|a|em)\s+([^?.,!]+)/i,
+                        // Pattern 2: "what time is it in [location]"
+                        /(?:what time is it|hora actual|heure actuelle|aktuelle zeit|ora attuale|hora atual)\s+(?:in|en|à|a|em)\s+([^?.,!]+)/i,
+                        // Pattern 3: "weather in [location]"
+                        /(?:weather|clima|météo|wetter|tempo)\s+(?:in|en|à|a|em)\s+([^?.,!]+)/i,
+                        // Pattern 4: "current time in [location]"
+                        /(?:current time|hora actual|heure actuelle|aktuelle zeit|ora attuale|hora atual)\s+(?:in|en|à|a|em)\s+([^?.,!]+)/i
+                      ];
+                      
+                      let location = null;
+                      for (const pattern of locationPatterns) {
+                        const match = cleanText.match(pattern);
+                        if (match) {
+                          location = match[1].trim();
+                          break;
+                        }
+                      }
+                      
+                      // Handle real-time queries
+                      if (isTimeQuestion || isWeatherQuestion) {
+                        console.log(`🌍 Real-time query detected: ${isTimeQuestion ? 'time' : 'weather'}${location ? ` for ${location}` : ' (no location specified)'}`);
+                        
+                        try {
+                          let response = '';
+                          
+                          if (isTimeQuestion && isWeatherQuestion) {
+                            // Both time and weather
+                            if (location) {
+                              const locationInfo = await getLocationInfo(location);
+                              response = formatLocationInfo(locationInfo, detectedLanguage);
+                            } else {
+                              // Server time and generic weather info
+                              const serverTime = new Date();
+                              const timeStr = serverTime.toLocaleString('en-US', {
+                                timeZone: 'UTC',
+                                year: 'numeric',
+                                month: 'long',
+                                day: 'numeric',
+                                hour: '2-digit',
+                                minute: '2-digit',
+                                second: '2-digit',
+                                hour12: true
+                              });
+                              response = `🕐 ${getLocalizedResponse(detectedLanguage, 'time', { location: 'Server Time', time: timeStr, timezone: 'UTC' })}\n\n🌤️ ${getLocalizedResponse(detectedLanguage, 'weather', { location: 'Server Location', temperature: 'N/A', description: 'Weather data not available for server location' })}`;
+                            }
+                          } else if (isTimeQuestion) {
+                            // Time only
+                            if (location) {
+                              const timeInfo = await getCurrentTime(location);
+                              response = `🕐 ${getLocalizedResponse(detectedLanguage, 'time', { location: timeInfo.location, time: timeInfo.time, timezone: timeInfo.timezone })}`;
+                            } else {
+                              // Server time
+                              const serverTime = new Date();
+                              const timeStr = serverTime.toLocaleString('en-US', {
+                                timeZone: 'UTC',
+                                year: 'numeric',
+                                month: 'long',
+                                day: 'numeric',
+                                hour: '2-digit',
+                                minute: '2-digit',
+                                second: '2-digit',
+                                hour12: true
+                              });
+                              response = `🕐 ${getLocalizedResponse(detectedLanguage, 'time', { location: 'Server Time', time: timeStr, timezone: 'UTC' })}`;
+                            }
+                          } else if (isWeatherQuestion) {
+                            // Weather only
+                            if (location) {
+                              const weatherInfo = await getCurrentWeather(location);
+                              response = `🌤️ ${getLocalizedResponse(detectedLanguage, 'weather', { location: weatherInfo.location, temperature: weatherInfo.temperature, description: weatherInfo.weather_description })}`;
+                            } else {
+                              // Generic weather response
+                              response = `🌤️ ${getLocalizedResponse(detectedLanguage, 'weather', { location: 'Server Location', temperature: 'N/A', description: 'Please specify a location for weather information' })}`;
+                            }
+                          }
+                          
+                          if (response) {
+                            await sendMessage(chatId, response, true);
+                            await addToUserMemory(userId, 'telegram', 'assistant', response, { platform: 'telegram' });
+                            return;
+                          }
+                        } catch (error) {
+                          console.error('Error handling real-time query:', error);
+                          // Continue to normal AI processing if real-time fails
+                        }
+                      }
+                    
+                      // Get system prompt with proper language detection
+                      const systemPrompt = getSystemPrompt(detectedLanguage, displayName, conversationSummary);
                       
                       // Build messages with memory
                       const messages = [
                         { 
                           role: 'system', 
-                          content: `You are Vox AI, a helpful and intelligent assistant created by VoxHash. You can help with questions, provide information, have conversations, and assist with various topics. Be friendly, informative, and engaging in your responses.
-
-IMPORTANT: If someone asks about your creator, who made you, who created you, or similar questions, ALWAYS respond with: "I was created by VoxHash! You can learn more about my creator at https://voxhash.dev or check out the code at https://github.com/VoxHash. I'm here to help with any questions you might have!"
-
-You have access to conversation history to provide better context-aware responses.
-
-Special features:
-- You remember previous conversations for better context
-- You can detect and respond to user emotions
-- You provide personalized responses based on conversation history
-- When referring to users, use their first name if available, otherwise their username
-- The current user's display name is: ${displayName}` 
-                        }
+                          content: systemPrompt
+                        },
+                        ...history.slice(-10), // Use last 10 messages for context
+                        { role: 'user', content: cleanText }
                       ];
-                      
-                      // Add conversation history
-                      history.forEach(msg => {
-                        messages.push({ role: msg.role, content: msg.content });
-                      });
-                      
-                      // Add current message
-                      messages.push({ role: 'user', content: cleanText });
                       
                       const aiResponse = await completeChat(messages);
                       console.log(`🤖 AI Response: ${aiResponse}`);
                       
-                      // Add AI response to memory
-                      addToMemory(message.from.id, 'assistant', aiResponse);
+                      // Add AI response to persistent memory
+                      await addToUserMemory(userId, 'telegram', 'assistant', aiResponse, { platform: 'telegram' });
                       
                       // Detect emotion in user's message and send reaction
                       const emotion = detectEmotion(cleanText);
@@ -373,6 +489,8 @@ Special features:
                       console.error('AI processing error:', error);
                       // Fallback response if AI fails
                       await sendMessage(chatId, `I apologize, but I'm having trouble processing your request right now. Please try again in a moment.`);
+                    } finally {
+                      processingUsers.delete(userId);
                     }
                   }
                 }

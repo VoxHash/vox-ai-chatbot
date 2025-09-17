@@ -1,0 +1,34 @@
+{
+  "name": "vox-ai-chatbot",
+  "version": "0.0.2",
+  "description": "Vox AI Chatbot - A female nerdy AI assistant with goth tendencies and kawaii appearance",
+  "author": "VoxHash",
+  "license": "MIT",
+  "keywords": [
+    "ai",
+    "chatbot",
+    "discord",
+    "telegram", 
+    "whatsapp",
+    "openai",
+    "multilingual",
+    "vox"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/voxhash/vox-ai-chatbot.git"
+  },
+  "bugs": {
+    "url": "https://github.com/voxhash/vox-ai-chatbot/issues"
+  },
+  "homepage": "https://github.com/voxhash/vox-ai-chatbot#readme",
+  "scripts": {
+    "install:all": "cd backend && npm install && cd ../frontend && npm install",
+    "start:all": "docker-compose up -d",
+    "stop:all": "docker-compose down",
+    "dev": "docker-compose up --build"
+  },
+  "dependencies": {
+    "whatsapp-web.js": "^1.34.1"
+  }
+}
