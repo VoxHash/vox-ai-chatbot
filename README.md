@@ -27,226 +27,200 @@
 
 ### 🎭 **Vox's Personality**
 - **Female AI Character**: Nerdy, goth, and kawaii personality
-- **Creator**: VoxHash
+- **Creator**: VoxHash (her father)
+- **Birthday**: February 23, 2024 at 1:18 PM
 - **Tone**: Intelligent, friendly, with a touch of dark humor
 - **Responses**: Contextual and emotionally aware
 
 ## 🚀 Quick Start
 
 ### Prerequisites
-- Node.js 18+ 
+- Node.js 18+
 - Docker & Docker Compose
-- PostgreSQL database
-- Redis (optional, for caching)
+- Git
 
 ### Installation
 
 1. **Clone the repository**
 ```bash
-git clone https://github.com/voxhash/vox-ai-chatbot.git
+git clone https://github.com/VoxHash/vox-ai-chatbot.git
 cd vox-ai-chatbot
 ```
 
 2. **Install dependencies**
 ```bash
-# Backend
-cd backend
-npm install
-
-# Frontend
-cd ../frontend
-npm install
+npm run install:all
 ```
 
-3. **Environment Setup**
+3. **Environment setup**
 ```bash
-# Copy environment template
-cp .env.example .env
-
-# Edit with your configuration
-nano .env
+cp env.template .env
+# Edit .env with your configuration
 ```
 
-4. **Database Setup**
+4. **Start services**
 ```bash
-# Start PostgreSQL with Docker
-docker-compose up -d postgres
-
-# Run database migrations
-cd backend
-npm run db:migrate
-```
-
-5. **Start the services**
-```bash
-# Start all services with Docker Compose
+# Docker Compose (Recommended)
 docker-compose up -d
 
-# Or start individually
-npm run start:backend
-npm run start:frontend
+# Or manual start
+npm run start:all
 ```
+
+5. **Access the application**
+- **Web Interface**: http://localhost:8080
+- **Backend API**: http://localhost:4000
+- **Default Login**: `test@example.com` / `Passw0rd!`
+
+## 📚 Documentation
+
+- **[Complete Setup Guide](SETUP.md)** - Detailed installation and configuration
+- **[Development Roadmap](ROADMAP.md)** - Future features and development phases
+- **[Contributing Guide](CONTRIBUTING.md)** - How to contribute to Vox
+- **[Changelog](CHANGELOG.md)** - Version history and updates
 
 ## 🤖 Bot Setup
 
 ### Discord Bot
-1. Create a Discord application at [Discord Developer Portal](https://discord.com/developers/applications)
-2. Enable required intents: `Guilds`, `GuildMessages`, `DirectMessages`, `MessageContent`, `GuildMessageReactions`, `GuildMembers`
-3. Add bot token to `.env` file
-4. Start the bot: `npm run start:discord`
+1. Create application at [Discord Developer Portal](https://discord.com/developers/applications)
+2. Enable required intents and permissions
+3. Add bot token to `.env`
+4. Start: `npm run start:discord`
 
 ### Telegram Bot
-1. Create a bot with [@BotFather](https://t.me/botfather)
-2. Get bot token and add to `.env` file
-3. Start the bot: `npm run start:telegram`
+1. Create bot with [@BotFather](https://t.me/botfather)
+2. Add bot token to `.env`
+3. Start: `npm run start:telegram`
 
 ### WhatsApp Bot
-1. No token needed - uses QR code authentication
-2. Start the bot: `npm run start:whatsapp`
+1. No token needed - uses QR authentication
+2. Start: `npm run start:whatsapp`
 3. Scan QR code with WhatsApp mobile app
-4. Bot will be ready for use
 
-## 📖 Usage
+## 📱 Usage Examples
 
-### Discord Commands
-- `/chat <message>` - Chat with Vox
-- `/help` - Show available commands
-- React to messages for personalized responses
-- Vox can create and manage threads
-- Nickname management for users
-
-### Telegram Features
-- Send messages to Vox in DMs or groups
-- Use `@vox` to mention in groups
-- Inline keyboard interactions
-- Reaction-based responses
-
-### WhatsApp Features
-- Send messages directly to the bot
-- Mention `@vox` in group chats
-- Real-time queries for time and weather
-- Multilingual support
-
-## 🛠️ Configuration
-
-### Environment Variables
-```env
-# Database
-DATABASE_URL=postgresql://user:password@localhost:5432/vox_chatbot
-
-# AI Models
-OPENAI_API_KEY=your_openai_key
-LOCALAI_URL=http://localhost:8080
-MODEL_NAME=vox_legacy
-
-# Bot Tokens
-DISCORD_BOT_TOKEN=your_discord_token
-TELEGRAM_BOT_TOKEN=your_telegram_token
-
-# Redis (optional)
-REDIS_URL=redis://localhost:6379
-
-# Security
-JWT_SECRET=your_jwt_secret
-BCRYPT_ROUNDS=12
+### Discord
+```
+/chat Hello Vox!
+/help
 ```
 
-### Model Configuration
-- **OpenAI**: Set `OPENAI_API_KEY` and `MODEL_NAME`
-- **LocalAI**: Set `LOCALAI_URL` and `MODEL_NAME`
-- **GGUF Models**: Place `.gguf` files in `models/` directory
-
-## 🏗️ Architecture
-
+### Telegram
 ```
-vox-ai-chatbot/
-├── backend/                 # Node.js backend
-│   ├── src/
-│   │   ├── ai/             # AI model integrations
-│   │   ├── integrations/   # Bot integrations
-│   │   ├── lib/            # Utility libraries
-│   │   ├── routes/         # API routes
-│   │   └── tests/          # Test files
-│   └── package.json
-├── frontend/               # React frontend
-│   ├── src/
-│   └── package.json
-├── models/                 # AI model files
-├── scripts/               # Utility scripts
-├── docker-compose.yml     # Docker configuration
-└── README.md
+@vox What time is it in Tokyo?
+@vox What's the weather in Madrid?
 ```
+
+### WhatsApp
+```
+What time is it in New York?
+¿Qué hora es en Barcelona?
+What's the weather in London?
+```
+
+## 🎯 Bot Features
+
+### Discord Bot Features
+- ✅ Slash commands (`/chat message:`)
+- ✅ DM and server channel support
+- ✅ Thread creation with user confirmation
+- ✅ Emotion-based reactions
+- ✅ Personalized responses to reactions
+- ✅ Nickname changing assistance
+- ✅ Welcome messages for new members
+- ✅ Conversation memory
+- ✅ Multilingual support
+
+### Telegram Bot Features
+- ✅ Direct message support
+- ✅ Group message support (with mentions)
+- ✅ Emotion-based reactions
+- ✅ Personalized responses to reactions
+- ✅ Welcome messages for new members
+- ✅ Conversation memory
+- ✅ Inline keyboard reactions
+- ✅ Multilingual support
+
+### WhatsApp Bot Features
+- ✅ Direct message support
+- ✅ Group message support (with mentions)
+- ✅ Emotion-based reactions
+- ✅ Personalized responses to reactions
+- ✅ Welcome messages for new members
+- ✅ Conversation memory
+- ✅ QR code authentication
+- ✅ Multilingual support
 
 ## 🧪 Testing
 
+### Test All Integrations
 ```bash
-# Run all tests
-npm test
-
-# Run integration tests
+cd backend
 npm run test:integration
-
-# Run with coverage
-npm run test:coverage
 ```
 
-## 📚 API Documentation
+### Test Specific Features
+```bash
+# Test location detection
+node scripts/test-location-detection.js
 
-### Chat Endpoint
-```http
-POST /api/chat
-Content-Type: application/json
+# Test fallback responses
+node scripts/test-fallback-responses.js
 
-{
-  "message": "Hello Vox!",
-  "platform": "discord",
-  "userId": "user123"
-}
+# Test multilingual support
+node scripts/test-multilingual.js
 ```
 
-### Real-time Queries
-- **Time**: "What time is it in Tokyo?"
-- **Weather**: "What's the weather in Madrid?"
-- **Multilingual**: "¿Qué hora es en Barcelona?"
+## 🔧 Troubleshooting
 
-## 🔧 Development
+### Common Issues
 
-### Adding New Platforms
-1. Create integration file in `backend/src/integrations/`
-2. Implement required methods: `sendMessage`, `handleMessage`
-3. Add platform-specific configuration
-4. Update environment variables
+**Bot not responding:**
+- Check if bot token is correct
+- Verify intents are enabled (Discord)
+- Check logs: `tail -f logs/discord.log`
 
-### Customizing Vox's Personality
-Edit the system prompts in `backend/src/lib/language.js` to modify Vox's responses and personality traits.
+**WhatsApp QR not working:**
+- Delete auth files: `rm -rf backend/auth_info_*`
+- Restart bot: `npm run start:whatsapp`
+
+**Database connection failed:**
+- Start PostgreSQL: `docker-compose up -d postgres`
+- Check DATABASE_URL in `.env`
+
+**AI responses not working:**
+- Verify OPENAI_API_KEY or LOCALAI_URL
+- Check model name in configuration
+
+### Logs Location
+- Discord: `logs/discord.log`
+- Telegram: `logs/telegram.log`  
+- WhatsApp: `logs/whatsapp.log`
+
+## 🎯 Next Steps
+
+1. **Customize Vox's personality** in `backend/src/lib/language.js`
+2. **Add custom commands** in respective bot files
+3. **Deploy to production** using Docker
+4. **Monitor logs** for any issues
+5. **Join the community** and contribute!
+
+## 🆘 Support
+
+- **Issues**: [GitHub Issues](https://github.com/VoxHash/vox-ai-chatbot/issues)
+- **Discussions**: [GitHub Discussions](https://github.com/VoxHash/vox-ai-chatbot/discussions)
+- **Setup Guide**: [SETUP.md](SETUP.md) for detailed instructions
+
+## 🤝 Contributing
+
+We welcome contributions! Please see our [Contributing Guide](CONTRIBUTING.md) for details.
 
 ## 📄 License
 
 This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
 
-## 👥 Contributing
-
-1. Fork the repository
-2. Create a feature branch
-3. Make your changes
-4. Add tests if applicable
-5. Submit a pull request
-
-## 🆘 Support
-
-- **Issues**: [GitHub Issues](https://github.com/voxhash/vox-ai-chatbot/issues)
-- **Discussions**: [GitHub Discussions](https://github.com/voxhash/vox-ai-chatbot/discussions)
-- **Creator**: VoxHash
-
-## 🙏 Acknowledgments
-
-- OpenAI for GPT models
-- Discord.js for Discord integration
-- Baileys for WhatsApp integration
-- The open-source community
-
 ---
 
 **Made with ❤️ by VoxHash for the AI community**
 
-*Vox is always ready to help, whether you need information, want to chat, or just need someone to understand your nerdy references!* 🤖✨
+*Vox is ready to help you get started!* *giggles cutely* 🤖✨
