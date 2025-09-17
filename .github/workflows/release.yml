@@ -1,0 +1,88 @@
+name: 🚀 Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+jobs:
+  release:
+    name: 🚀 Create Release
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: 📥 Checkout code
+      uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
+        
+    - name: 📦 Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '20.x'
+        cache: 'npm'
+        
+    - name: 📦 Install dependencies
+      run: |
+        npm run install:all
+        
+    - name: 🧪 Run tests
+      run: |
+        cd backend
+        npm test
+        
+    - name: 🏗️ Build project
+      run: |
+        cd frontend
+        npm run build
+        
+    - name: 📦 Create release archive
+      run: |
+        tar -czf vox-ai-chatbot-${{ github.ref_name }}.tar.gz \
+          --exclude=node_modules \
+          --exclude=.git \
+          --exclude=logs \
+          --exclude=backend/memory \
+          --exclude=backend/auth_info_* \
+          .
+        
+    - name: 🏷️ Create GitHub Release
+      uses: actions/create-release@v1
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      with:
+        tag_name: ${{ github.ref_name }}
+        release_name: Vox AI Chatbot ${{ github.ref_name }}
+        body: |
+          ## 🎉 Vox AI Chatbot ${{ github.ref_name }}
+          
+          ### ✨ What's New
+          - Check the changelog for detailed updates
+          
+          ### 🚀 Quick Start
+          1. Download the release archive
+          2. Extract and follow the setup guide
+          3. Configure your environment
+          4. Start Vox AI Chatbot!
+          
+          ### 📚 Documentation
+          - [Setup Guide](https://github.com/VoxHash/vox-ai-chatbot/wiki/Setup-Guide)
+          - [API Documentation](https://github.com/VoxHash/vox-ai-chatbot/wiki/API-Documentation)
+          - [Contributing Guide](https://github.com/VoxHash/vox-ai-chatbot/wiki/Contributing)
+          
+          ### 🤖 Meet Vox
+          Vox is a female AI with a nerdy goth-kawaii personality, created by VoxHash!
+          
+          **Made with ❤️ by VoxHash**
+        draft: false
+        prerelease: false
+        
+    - name: 📤 Upload release asset
+      uses: actions/upload-release-asset@v1
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      with:
+        upload_url: ${{ steps.create_release.outputs.upload_url }}
+        asset_path: ./vox-ai-chatbot-${{ github.ref_name }}.tar.gz
+        asset_name: vox-ai-chatbot-${{ github.ref_name }}.tar.gz
+        asset_content_type: application/gzip
