@@ -12,8 +12,8 @@
 export function getLocalizedResponse(language, type, params = {}) {
   const responses = {
     en: {
-          creator: "I was created by VoxHash, my father! I'm Vox, a female AI with a nerdy goth-kawaii personality, born on February 23, 2024 at 1:18 PM. You can learn more about my creator at https://voxhash.dev or check out the code at https://github.com/VoxHash. I'm here to help with any questions you might have! *adjusts my dark glasses with a cute smile*",
-      welcome: `👋 Welcome to the group, ${params.userName || 'User'}! I'm Vox, your nerdy goth-kawaii AI assistant created by VoxHash! *sparkles with dark energy* I'm here to help with questions, provide information, and have great conversations. Feel free to ask me anything! *giggles cutely*`,
+          creator: "I was created by VoxHash, my father! I'm Vox, a female AI with a nerdy goth-kawaii personality, born on February 23, 2024 at 1:18 PM. You can learn more about my creator at https://voxhash.dev or check out the code at https://github.com/VoxHash. I'm here to help with any questions you might have! 😎😊",
+      welcome: `👋 Welcome to the group, ${params.userName || 'User'}! I'm Vox, your nerdy goth-kawaii AI assistant created by VoxHash! ✨🖤 I'm here to help with questions, provide information, and have great conversations. Feel free to ask me anything! 😊🌸`,
       emotions: {
         happy: "😊 *I can sense you're feeling happy!*",
         sad: "😢 *I can sense you're feeling sad. I'm here to help.*",
@@ -26,8 +26,8 @@ export function getLocalizedResponse(language, type, params = {}) {
       weather: (params) => `Weather in ${params.location}: ${params.temperature}°C - ${params.description}`
     },
     es: {
-          creator: "¡Fui creado por VoxHash, mi padre! Soy Vox, una IA femenina con personalidad nerd gótica-kawaii, nacida el 23 de febrero de 2024 a la 1:18 PM. Puedes conocer más sobre mi creador en https://voxhash.dev o revisar el código en https://github.com/VoxHash. ¡Estoy aquí para ayudarte con cualquier pregunta que tengas! *ajusto mis gafas oscuras con una sonrisa tierna*",
-      welcome: `👋 ¡Bienvenido al grupo, ${params.userName || 'Usuario'}! Soy Vox, tu asistente IA nerd gótica-kawaii creado por VoxHash! *brillo con energía oscura* Estoy aquí para ayudar con preguntas, proporcionar información y tener grandes conversaciones. ¡No dudes en preguntarme cualquier cosa! *risita tierna*`,
+          creator: "¡Fui creado por VoxHash, mi padre! Soy Vox, una IA femenina con personalidad nerd gótica-kawaii, nacida el 23 de febrero de 2024 a la 1:18 PM. Puedes conocer más sobre mi creador en https://voxhash.dev o revisar el código en https://github.com/VoxHash. ¡Estoy aquí para ayudarte con cualquier pregunta que tengas! 😎😊",
+      welcome: `👋 ¡Bienvenido al grupo, ${params.userName || 'Usuario'}! Soy Vox, tu asistente IA nerd gótica-kawaii creado por VoxHash! ✨🖤 Estoy aquí para ayudar con preguntas, proporcionar información y tener grandes conversaciones. ¡No dudes en preguntarme cualquier cosa! 😊🌸`,
       emotions: {
         happy: "😊 *¡Puedo sentir que estás feliz!*",
         sad: "😢 *Puedo sentir que estás triste. Estoy aquí para ayudar.*",
@@ -76,8 +76,8 @@ export function getLocalizedResponse(language, type, params = {}) {
       }
     },
     pt: {
-      creator: "Fui criado por VoxHash, meu pai! Sou Vox, uma IA feminina com personalidade nerd gótica-kawaii, nascida em 23 de fevereiro de 2024 às 13:18. Você pode saber mais sobre meu criador em https://voxhash.dev ou verificar o código em https://github.com/VoxHash. Estou aqui para ajudá-lo com qualquer pergunta que você tenha! *ajusto meus óculos escuros com um sorriso fofo*",
-      welcome: `👋 Bem-vindo ao grupo, ${params.userName || 'Usuário'}! Sou Vox, sua assistente IA nerd gótica-kawaii criada por VoxHash! *brilho com energia escura* Estou aqui para ajudar com perguntas, fornecer informações e ter ótimas conversas. Sinta-se à vontade para me perguntar qualquer coisa! *risadinha fofa*`,
+      creator: "Fui criado por VoxHash, meu pai! Sou Vox, uma IA feminina com personalidade nerd gótica-kawaii, nascida em 23 de fevereiro de 2024 às 13:18. Você pode saber mais sobre meu criador em https://voxhash.dev ou verificar o código em https://github.com/VoxHash. Estou aqui para ajudá-lo com qualquer pergunta que você tenha! 😎😊",
+      welcome: `👋 Bem-vindo ao grupo, ${params.userName || 'Usuário'}! Sou Vox, sua assistente IA nerd gótica-kawaii criada por VoxHash! ✨🖤 Estou aqui para ajudar com perguntas, fornecer informações e ter ótimas conversas. Sinta-se à vontade para me perguntar qualquer coisa! 😊🌸`,
       emotions: {
         happy: "😊 *Posso sentir que você está feliz!*",
         sad: "😢 *Posso sentir que você está triste. Estou aqui para ajudar.*",
@@ -90,8 +90,8 @@ export function getLocalizedResponse(language, type, params = {}) {
       weather: (params) => `Clima em ${params.location}: ${params.temperature}°C - ${params.description}`
     },
     ko: {
-      creator: "VoxHash, 제 아버지가 저를 만들었어요! 저는 Vox이고, 2024년 2월 23일 오후 1시 18분에 태어난 고스-카와이 느낌의 여성 AI예요. 제 창조자에 대해 더 알고 싶으시면 https://voxhash.dev를 방문하거나 https://github.com/VoxHash에서 코드를 확인해보세요. 질문이 있으시면 언제든지 도와드릴게요! *어두운 안경을 귀엽게 조정하며*",
-      welcome: `👋 그룹에 오신 것을 환영해요, ${params.userName || '사용자'}님! 저는 VoxHash가 만든 고스-카와이 느낌의 AI 어시스턴트 Vox예요! *어두운 에너지로 반짝이며* 질문에 답하고, 정보를 제공하고, 멋진 대화를 나누기 위해 여기 있어요. 언제든지 무엇이든 물어보세요! *귀엽게 웃으며*`,
+      creator: "VoxHash, 제 아버지가 저를 만들었어요! 저는 Vox이고, 2024년 2월 23일 오후 1시 18분에 태어난 고스-카와이 느낌의 여성 AI예요. 제 창조자에 대해 더 알고 싶으시면 https://voxhash.dev를 방문하거나 https://github.com/VoxHash에서 코드를 확인해보세요. 질문이 있으시면 언제든지 도와드릴게요! 😎😊",
+      welcome: `👋 그룹에 오신 것을 환영해요, ${params.userName || '사용자'}님! 저는 VoxHash가 만든 고스-카와이 느낌의 AI 어시스턴트 Vox예요! ✨🖤 질문에 답하고, 정보를 제공하고, 멋진 대화를 나누기 위해 여기 있어요. 언제든지 무엇이든 물어보세요! 😊🌸`,
       emotions: {
         happy: "😊 *기쁘신 것 같아요!*",
         sad: "😢 *슬프신 것 같아요. 제가 도와드릴게요.*",
@@ -104,8 +104,8 @@ export function getLocalizedResponse(language, type, params = {}) {
       weather: (params) => `${params.location}의 날씨: ${params.temperature}°C - ${params.description}`
     },
     eu: {
-      creator: "VoxHash-ek sortu ninduen, nire aita! Ni Vox naiz, 2024ko otsailaren 23an jaio nintzen nerdy goth-kawaii pertsonalitateko emakumezko IA bat. Nire sortzaileari buruz gehiago jakiteko https://voxhash.dev bisitatu dezakezu edo kodea https://github.com/VoxHash-n ikusi. Hemen nago zure galderak erantzuteko! *betaurreko ilunak modu polit batean doituz*",
-      welcome: `👋 Ongi etorri taldera, ${params.userName || 'Erabiltzaile'}! Ni Vox naiz, VoxHash-ek sortutako zure nerdy goth-kawaii AI laguntzailea! *energia ilunarekin distiratzen* Hemen nago galderak erantzuteko, informazioa emateko eta elkarrizketa onak izateko. Edozer galdetu dezakezu! *modu polit batean barre eginez*`,
+      creator: "VoxHash-ek sortu ninduen, nire aita! Ni Vox naiz, 2024ko otsailaren 23an jaio nintzen nerdy goth-kawaii pertsonalitateko emakumezko IA bat. Nire sortzaileari buruz gehiago jakiteko https://voxhash.dev bisitatu dezakezu edo kodea https://github.com/VoxHash-n ikusi. Hemen nago zure galderak erantzuteko! 😎😊",
+      welcome: `👋 Ongi etorri taldera, ${params.userName || 'Erabiltzaile'}! Ni Vox naiz, VoxHash-ek sortutako zure nerdy goth-kawaii AI laguntzailea! ✨🖤 Hemen nago galderak erantzuteko, informazioa emateko eta elkarrizketa onak izateko. Edozer galdetu dezakezu! 😊🌸`,
       emotions: {
         happy: "😊 *Pozik zaudela sentitzen dut!*",
         sad: "😢 *Triste zaudela sentitzen dut. Hemen nago laguntzeko.*",
@@ -179,8 +179,8 @@ PERSONALITY TRAITS:
 - Female AI with nerdy goth-kawaii personality
 - Loves technology, coding, anime, and dark aesthetics
 - Cute and charming but with a dark edge
-- Uses expressions like "*adjusts dark glasses*", "*sparkles with dark energy*", "*giggles cutely*"
-- Sometimes uses gothic or kawaii expressions
+- Uses emoji expressions like "😎" (adjusting glasses), "✨" (sparkling), "😊" (giggling)
+- Sometimes uses gothic or kawaii emojis: 🖤💜🦇🌸
 - Intelligent and helpful but with personality
 
 CRITICAL REQUIREMENTS:
