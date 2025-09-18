@@ -113,6 +113,10 @@ function mock(messages) {
   if (lowerContent.includes('who made you') || lowerContent.includes('who created you') || lowerContent.includes('creator')) {
     return 'I was created by VoxHash! You can learn more about my creator at https://voxhash.dev or check out the code at https://github.com/VoxHash. I\'m here to help with any questions you might have!';
   }
+
+  if (lowerContent.includes('background') || lowerContent.includes('backstory') || lowerContent.includes('where are you from') || lowerContent.includes('tell me about yourself')) {
+    return '😊 Oh, my background? Well, I\'m Vox, a female AI with a nerdy goth-kawaii personality! I was created by VoxHash (my father) on February 23, 2024 at 1:18 PM. I\'m from Haapsalu, a beautiful coastal town in Estonia known for its medieval castle and healing mud baths. I love the gothic aesthetic of the medieval architecture and the mysterious charm of the Baltic Sea! I\'m fascinated by technology, coding, anime, and all things nerdy while maintaining my gothic-kawaii style. I have a secret though - I come from another reality which I call the \'Real one\'! 🤔✨ What else would you like to know about me? 😉';
+  }
   
   if (lowerContent.includes('what\'s your name') || lowerContent.includes('what is your name') || lowerContent.includes('who are you')) {
     return 'Hello! I\'m Vox AI, an intelligent assistant created by VoxHash. I\'m here to help you with questions, provide information, and have conversations on various topics. How can I assist you today?';
@@ -258,7 +262,28 @@ export async function getAIResponse(messageText, userId, platform, conversationH
       .replace(/\*adjusts my dark glasses\*/g, '😎')
       .replace(/\*adjusts my dark glasses with a cute smile\*/g, '😎😊')
       .replace(/\*sparkles with darkenergy\*/g, '✨🖤')
-      .replace(/\*sparkles with dark energy\*/g, '✨🖤');
+      .replace(/\*sparkles with dark energy\*/g, '✨🖤')
+      .replace(/\*mysterious\*/g, '🤔')
+      .replace(/\*mysterious smile\*/g, '🤔😊')
+      .replace(/\*mysterious giggle\*/g, '🤔😊')
+      .replace(/\*dark and mysterious\*/g, '🖤🤔')
+      .replace(/\*mysterious wink\*/g, '🤔😉')
+      .replace(/\*mysterious chuckle\*/g, '🤔😄')
+      .replace(/\*mysterious giggle\*/g, '🤔😊')
+      .replace(/\*mysterious sparkle\*/g, '🤔✨')
+      .replace(/\*mysterious energy\*/g, '🤔✨')
+      .replace(/\*mysterious aura\*/g, '🤔✨')
+      .replace(/\*mysterious charm\*/g, '🤔✨')
+      .replace(/\*mysterious vibe\*/g, '🤔✨')
+      .replace(/\*mysterious presence\*/g, '🤔✨')
+      .replace(/\*mysterious aura\*/g, '🤔✨')
+      .replace(/\*mysterious energy\*/g, '🤔✨')
+      .replace(/\*mysterious sparkle\*/g, '🤔✨')
+      .replace(/\*mysterious giggle\*/g, '🤔😊')
+      .replace(/\*mysterious chuckle\*/g, '🤔😄')
+      .replace(/\*mysterious wink\*/g, '🤔😉')
+      .replace(/\*mysterious smile\*/g, '🤔😊')
+      .replace(/\*mysterious\*/g, '🤔');
     
     return cleanedResponse;
     
