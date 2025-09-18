@@ -20,7 +20,10 @@ export function detectLanguageSimple(message) {
     'puedo', 'puedes', 'puede', 'podemos', 'podéis', 'pueden', 'hago', 'haces', 'hace',
     'hacemos', 'hacéis', 'hacen', 'digo', 'dices', 'dice', 'decimos', 'decís', 'dicen',
     'cuento', 'cuentos', 'vampiros', 'vampiro', 'chico', 'chica', 'pequeño', 'pequeña',
-    'historia', 'historias', 'relato', 'relatos', 'narrativa', 'narrativas'
+    'historia', 'historias', 'relato', 'relatos', 'narrativa', 'narrativas',
+    'hablas', 'habla', 'hablan', 'hablo', 'hablamos', 'alemán', 'aleman', 'alemana',
+    'español', 'espanol', 'frances', 'francés', 'ingles', 'inglés', 'italiano',
+    'portugues', 'portugués', 'idioma', 'idiomas', 'lengua', 'lenguas'
   ];
   
   // French indicators - very specific patterns only
@@ -72,6 +75,45 @@ export function detectLanguageSimple(message) {
     '하고있어요', '했었어요', '할거예요', '할수있어요', '못해요', '안해요', '하지않아요'
   ];
   
+  // Portuguese indicators
+  const portuguesePatterns = [
+    'voce', 'você', 'fala', 'falo', 'falamos', 'falam', 'português', 'portugues',
+    'olá', 'ola', 'obrigado', 'obrigada', 'obrigados', 'obrigadas', 'por favor',
+    'bom dia', 'boa tarde', 'boa noite', 'como', 'onde', 'quando', 'por que', 'porque',
+    'quem', 'o que', 'que', 'qual', 'quais', 'quantos', 'quantas', 'quanto', 'quanta',
+    'sim', 'não', 'nao', 'ajuda', 'ajudar', 'informação', 'informacao', 'informações',
+    'informacoes', 'sabe', 'sabes', 'sei', 'sabemos', 'sabem', 'pode', 'podes', 'posso',
+    'podemos', 'podem', 'fazer', 'faço', 'fazes', 'faz', 'fazemos', 'fazem', 'dizer',
+    'digo', 'dizes', 'diz', 'dizemos', 'dizem', 'estou', 'estás', 'está', 'estamos',
+    'estão', 'sou', 'és', 'é', 'somos', 'são', 'tenho', 'tens', 'tem', 'temos', 'têm',
+    'muito', 'muita', 'muitos', 'muitas', 'pouco', 'pouca', 'poucos', 'poucas',
+    'bom', 'boa', 'bons', 'boas', 'mau', 'má', 'maus', 'más', 'grande', 'grandes',
+    'pequeno', 'pequena', 'pequenos', 'pequenas', 'novo', 'nova', 'novos', 'novas',
+    'velho', 'velha', 'velhos', 'velhas', 'jovem', 'jovens', 'bonito', 'bonita',
+    'bonitos', 'bonitas', 'feio', 'feia', 'feios', 'feias', 'feliz', 'triste',
+    'cansado', 'cansada', 'cansados', 'cansadas', 'doente', 'doentes', 'saudável',
+    'saudaveis', 'forte', 'fortes', 'fraco', 'fraca', 'fracos', 'fracas', 'rico',
+    'rica', 'ricos', 'ricas', 'pobre', 'pobres', 'livre', 'livres', 'ocupado',
+    'ocupada', 'ocupados', 'ocupadas', 'pronto', 'pronta', 'prontos', 'prontas',
+    'fácil', 'facil', 'fáceis', 'faceis', 'difícil', 'dificil', 'difíceis', 'dificeis',
+    'possível', 'possivel', 'possíveis', 'possiveis', 'impossível', 'impossivel',
+    'impossíveis', 'impossiveis', 'necessário', 'necessario', 'necessários', 'necessarios',
+    'necessária', 'necessaria', 'necessárias', 'necessarias', 'importante', 'importantes',
+    'interessante', 'interessantes', 'divertido', 'divertida', 'divertidos', 'divertidas',
+    'chato', 'chata', 'chatos', 'chatas', 'perigoso', 'perigosa', 'perigosos', 'perigosas',
+    'seguro', 'segura', 'seguros', 'seguras', 'certo', 'certa', 'certos', 'certas',
+    'errado', 'errada', 'errados', 'erradas', 'verdadeiro', 'verdadeira', 'verdadeiros',
+    'verdadeiras', 'falso', 'falsa', 'falsos', 'falsas', 'antigo', 'antiga', 'antigos',
+    'antigas', 'primeiro', 'primeira', 'primeiros', 'primeiras', 'último', 'ultimo',
+    'última', 'ultima', 'últimos', 'ultimos', 'últimas', 'ultimas', 'próximo', 'proximo',
+    'próxima', 'proxima', 'próximos', 'proximos', 'próximas', 'proximas', 'outro',
+    'outra', 'outros', 'outras', 'mesmo', 'mesma', 'mesmos', 'mesmas', 'diferente',
+    'diferentes', 'parecido', 'parecida', 'parecidos', 'parecidas', 'semelhante',
+    'semelhantes', 'como', 'também', 'tambem', 'ainda', 'já', 'ja', 'logo', 'cedo',
+    'tarde', 'então', 'entao', 'portanto', 'mas', 'porque', 'por que', 'qual',
+    'quais', 'quem', 'cujo', 'cuja', 'cujos', 'cujas'
+  ];
+
   // Basque indicators
   const basquePatterns = [
     'kaixo', 'agur', 'eskerrik', 'eskerrik asko', 'milesker', 'barkatu', 'sentitzen',
@@ -88,6 +130,7 @@ export function detectLanguageSimple(message) {
   let englishCount = 0;
   let koreanCount = 0;
   let basqueCount = 0;
+  let portugueseCount = 0;
   
   for (const pattern of spanishPatterns) {
     if (lowerMessage.includes(pattern)) {
@@ -119,13 +162,20 @@ export function detectLanguageSimple(message) {
     }
   }
   
+  for (const pattern of portuguesePatterns) {
+    if (lowerMessage.includes(pattern)) {
+      portugueseCount++;
+    }
+  }
+  
   // Return the language with the most matches
   const counts = [
     { lang: 'es', count: spanishCount },
     { lang: 'fr', count: frenchCount },
     { lang: 'en', count: englishCount },
     { lang: 'ko', count: koreanCount },
-    { lang: 'eu', count: basqueCount }
+    { lang: 'eu', count: basqueCount },
+    { lang: 'pt', count: portugueseCount }
   ];
   
   const maxCount = Math.max(...counts.map(c => c.count));

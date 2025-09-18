@@ -5,7 +5,27 @@ import { getAIResponse } from '../ai/localai.js';
 import { loadUserMemory, saveUserMemory } from '../lib/memory.js';
 import { detectLanguageSimple } from '../lib/language-detection-simple.js';
 import { getLocalizedResponse } from '../lib/language.js';
-import { detectEmotion } from '../lib/emotion-detection.js';
+// Emotion detection function
+function detectEmotion(text) {
+  const lowerText = text.toLowerCase();
+  
+  if (lowerText.includes('😊') || lowerText.includes(':)') || lowerText.includes('happy') || lowerText.includes('great') || lowerText.includes('awesome') || lowerText.includes('thanks') || lowerText.includes('thank you')) {
+    return 'happy';
+  }
+  if (lowerText.includes('😢') || lowerText.includes(':(') || lowerText.includes('sad') || lowerText.includes('upset') || lowerText.includes('disappointed')) {
+    return 'sad';
+  }
+  if (lowerText.includes('😡') || lowerText.includes('angry') || lowerText.includes('mad') || lowerText.includes('frustrated')) {
+    return 'angry';
+  }
+  if (lowerText.includes('😮') || lowerText.includes('wow') || lowerText.includes('amazing') || lowerText.includes('incredible') || lowerText.includes('excited')) {
+    return 'excited';
+  }
+  if (lowerText.includes('😕') || lowerText.includes('confused') || lowerText.includes('huh') || lowerText.includes('what')) {
+    return 'confused';
+  }
+  return 'neutral';
+}
 import { getCurrentTime, getCurrentWeather } from '../lib/realtime.js';
 
 const app = express();
