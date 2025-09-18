@@ -1,5 +1,5 @@
 import { makeWASocket, DisconnectReason, useMultiFileAuthState } from '@whiskeysockets/baileys';
-import { completeChat } from '../ai/openai.js';
+import { getAIResponse } from '../ai/localai.js';
 import fs from 'fs';
 import pino from 'pino';
 import QRCode from 'qrcode';
@@ -8,10 +8,10 @@ import {
   loadUserMemory, 
   addToUserMemory, 
   getConversationSummary, 
-  detectLanguage, 
   hasUserBeenGreeted,
   getUserPreferredLanguage 
 } from '../lib/memory.js';
+import { detectLanguageSimple } from '../lib/language-detection-simple.js';
 import { getLocalizedResponse, getSystemPrompt } from '../lib/language.js';
 import { getCurrentTime, getCurrentWeather, getLocationInfo, formatLocationInfo } from '../lib/realtime.js';
 
@@ -184,11 +184,11 @@ sock = makeWASocket({
   browser: ['Vox AI Chatbot', 'Chrome', '1.0.0'],
   generateHighQualityLinkPreview: false,
   markOnlineOnConnect: false,
-  defaultQueryTimeoutMs: 90000, // 1.5 minutes
-  keepAliveIntervalMs: 120000, // 2 minutes
-  connectTimeoutMs: 90000, // 1.5 minutes
-  retryRequestDelayMs: 5000,
-  maxMsgRetryCount: 1,
+  defaultQueryTimeoutMs: 120000, // 2 minutes
+  keepAliveIntervalMs: 30000, // 30 seconds
+  connectTimeoutMs: 120000, // 2 minutes
+  retryRequestDelayMs: 10000, // 10 seconds
+  maxMsgRetryCount: 3, // Allow more retries
   msgRetryCounterCache: new Map(),
   getMessage: async (key) => {
     return {
@@ -239,12 +239,12 @@ sock.ev.on('connection.update', (update) => {
     console.log('🔄 Reconnecting:', shouldReconnect);
     
     if (shouldReconnect) {
-      console.log('🔄 Waiting 10 seconds before reconnecting...');
+      console.log('🔄 Waiting 15 seconds before reconnecting...');
       setTimeout(() => {
         console.log('🔄 Attempting to reconnect...');
         // Restart the bot process
         process.exit(1);
-      }, 10000);
+      }, 15000);
     } else {
       console.log('❌ Not reconnecting - session logged out');
       process.exit(0);
@@ -258,6 +258,16 @@ sock.ev.on('connection.update', (update) => {
   } else if (connection === 'connecting') {
     console.log('🔄 Connecting to WhatsApp...');
   }
+});
+
+// Handle stream errors
+sock.ev.on('stream:error', (error) => {
+  console.log('❌ Stream error:', error);
+  console.log('🔄 Attempting to reconnect in 20 seconds...');
+  setTimeout(() => {
+    console.log('🔄 Restarting due to stream error...');
+    process.exit(1);
+  }, 20000);
 });
 
 sock.ev.on('creds.update', saveCreds);
@@ -294,8 +304,8 @@ sock.ev.on('messages.upsert', async (m) => {
   try {
     console.log(`📱 Processing message: "${messageText}" from ${jid}`);
     
-    // Detect language from current message and conversation history
-    const detectedLanguage = await detectLanguage(userId, 'whatsapp', messageText);
+    // Detect language from current message
+    const detectedLanguage = detectLanguageSimple(messageText);
     console.log(`🌍 Detected language: ${detectedLanguage}`);
     
     // Add user message to persistent memory
@@ -579,7 +589,7 @@ sock.ev.on('messages.upsert', async (m) => {
     
     // Process with AI
     console.log(`🧠 Processing message with AI: ${messageText}`);
-    const aiResponse = await completeChat(messages);
+    const aiResponse = await getAIResponse(messageText, userId, 'whatsapp', recentHistory, detectedLanguage);
     console.log(`🤖 AI Response: ${aiResponse}`);
     
     // Add AI response to persistent memory
