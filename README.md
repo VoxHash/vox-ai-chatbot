@@ -12,27 +12,25 @@
 ### 🧠 **Intelligent AI**
 - **Multi-Model Support**: OpenAI GPT, LocalAI, and custom GGUF models
 - **Conversation Memory**: Persistent context across sessions
-- **Multilingual Support**: English, Spanish, French, German, Italian, Portuguese
+- **Multilingual Support**: English, Spanish, French, German, Italian, Portuguese, Korean, Basque, Estonian
 - **Emotion Detection**: Responds with appropriate reactions and tone
-
-### 🌍 **Real-Time Features**
-- **Time Queries**: Get current time for any location worldwide
-- **Weather Information**: Real-time weather data for any city
-- **Location Detection**: Smart parsing of location names in multiple languages
+- **Real-Time Features**: Time and weather queries with location detection
 
 ### 📱 **Multi-Platform Support**
-- **Discord Bot**: Full slash commands, threads, reactions, and nickname management
+- **Discord Bot**: Slash commands, threads, reactions, nickname management
 - **Telegram Bot**: Group and DM support with inline keyboards
 - **WhatsApp Bot**: QR-based authentication with Baileys integration
+- **Web Frontend**: React-based interface with real-time chat
 
 ### 🎭 **Vox's Personality**
 - **Female AI Character**: Nerdy, goth, and kawaii personality
 - **Creator**: VoxHash (her father)
 - **Birthday**: February 23, 2024 at 1:18 PM
-- **Tone**: Intelligent, friendly, with a touch of dark humor
-- **Responses**: Contextual and emotionally aware
+- **Hometown**: Haapsalu, Estonia
+- **Secret**: From another reality called "Real one"
+- **Tone**: Intelligent, friendly, with emoji expressions instead of text
 
-## 🚀 Quick Start
+## 🚀 Quick Start (5 minutes)
 
 ### Prerequisites
 - Node.js 18+
@@ -41,24 +39,20 @@
 
 ### Installation
 
-1. **Clone the repository**
+1. **Clone and Install**
 ```bash
 git clone https://github.com/VoxHash/vox-ai-chatbot.git
 cd vox-ai-chatbot
-```
-
-2. **Install dependencies**
-```bash
 npm run install:all
 ```
 
-3. **Environment setup**
+2. **Environment Setup**
 ```bash
 cp env.template .env
 # Edit .env with your configuration
 ```
 
-4. **Start services**
+3. **Start Services**
 ```bash
 # Docker Compose (Recommended)
 docker-compose up -d
@@ -67,55 +61,105 @@ docker-compose up -d
 npm run start:all
 ```
 
-5. **Access the application**
+4. **Access Application**
 - **Web Interface**: http://localhost:8080
 - **Backend API**: http://localhost:4000
 - **Default Login**: `test@example.com` / `Passw0rd!`
 
-## 📚 Documentation
-
-- **[Complete Setup Guide](SETUP.md)** - Detailed installation and configuration
-- **[Development Roadmap](ROADMAP.md)** - Future features and development phases
-- **[Contributing Guide](CONTRIBUTING.md)** - How to contribute to Vox
-- **[Changelog](CHANGELOG.md)** - Version history and updates
-
 ## 🤖 Bot Setup
 
-### Discord Bot
-1. Create application at [Discord Developer Portal](https://discord.com/developers/applications)
-2. Enable required intents and permissions
-3. Add bot token to `.env`
-4. Start: `npm run start:discord`
+### Discord Bot Setup
 
-### Telegram Bot
-1. Create bot with [@BotFather](https://t.me/botfather)
-2. Add bot token to `.env`
-3. Start: `npm run start:telegram`
+1. **Create Discord Application**
+   - Go to [Discord Developer Portal](https://discord.com/developers/applications)
+   - Click "New Application" → Name it "Vox AI Chatbot"
+   - Save the **Application ID** (Client ID)
 
-### WhatsApp Bot
-1. No token needed - uses QR authentication
-2. Start: `npm run start:whatsapp`
-3. Scan QR code with WhatsApp mobile app
+2. **Create Bot**
+   - Go to "Bot" section → Click "Add Bot"
+   - Save the **Bot Token**
+   - Enable **Message Content Intent**
 
-## 📱 Usage Examples
+3. **Set Bot Permissions**
+   - Go to "OAuth2" → "URL Generator"
+   - Select scopes: `bot`, `applications.commands`
+   - Select permissions: Send Messages, Use Slash Commands, Read Message History, Message Content Intent, Guild Message Reactions, Guild Members
+   - Copy the generated URL and invite bot to your server
 
-### Discord
+4. **Start Discord Bot**
+   ```bash
+   cd backend
+   npm run start:discord
+   ```
+
+### Telegram Bot Setup
+
+1. **Create Telegram Bot**
+   - Open Telegram and search for `@BotFather`
+   - Send `/newbot` command
+   - Follow prompts to create your bot
+   - Save the **Bot Token**
+
+2. **Start Telegram Bot**
+   ```bash
+   cd backend
+   npm run start:telegram
+   ```
+
+### WhatsApp Bot Setup
+
+1. **No token needed** - uses QR authentication
+2. **Start WhatsApp Bot**
+   ```bash
+   cd backend
+   npm run start:whatsapp
+   ```
+3. **Connect Your WhatsApp**
+   - Scan the QR code displayed in the terminal
+   - Use your phone's WhatsApp to scan the code
+   - Bot will be connected and ready to use
+
+## 🧪 Testing
+
+### Test All Integrations
+```bash
+cd backend
+npm run test:integration
 ```
-/chat Hello Vox!
-/help
+
+### Health Checks
+```bash
+# Backend health
+curl http://localhost:4000/api/health
+
+# LLaMA server
+curl http://localhost:8081/completion -X POST \
+  -H "Content-Type: application/json" \
+  -d '{"prompt": "test", "max_tokens": 5}'
+
+# Web interface
+curl http://localhost:8080
 ```
 
-### Telegram
-```
-@vox What time is it in Tokyo?
-@vox What's the weather in Madrid?
-```
+## 🔧 Environment Configuration
 
-### WhatsApp
-```
-What time is it in New York?
-¿Qué hora es en Barcelona?
-What's the weather in London?
+**Required Environment Variables:**
+```env
+# Database
+DATABASE_URL=postgresql://user:password@localhost:5432/vox_chatbot
+
+# AI (choose one)
+OPENAI_API_KEY=your_openai_key
+# OR
+LOCALAI_URL=http://localhost:8080
+
+# Bot Tokens
+DISCORD_BOT_TOKEN=your_discord_token
+DISCORD_CLIENT_ID=your_discord_client_id
+TELEGRAM_BOT_TOKEN=your_telegram_token
+
+# Security
+JWT_SECRET=your_random_secret_key
 ```
 
 ## 🎯 Bot Features
@@ -148,27 +192,28 @@ What's the weather in London?
 - ✅ Personalized responses to reactions
 - ✅ Welcome messages for new members
 - ✅ Conversation memory
-- ✅ QR code authentication
+- ✅ QR code authentication with auto-cleanup
 - ✅ Multilingual support
 
-## 🧪 Testing
+## 📱 Usage Examples
 
-### Test All Integrations
-```bash
-cd backend
-npm run test:integration
+### Discord
+```
+/chat Hello Vox!
+/help
 ```
 
-### Test Specific Features
-```bash
-# Test location detection
-node scripts/test-location-detection.js
+### Telegram
+```
+@vox What time is it in Tokyo?
+@vox What's the weather in Madrid?
+```
 
-# Test fallback responses
-node scripts/test-fallback-responses.js
-
-# Test multilingual support
-node scripts/test-multilingual.js
+### WhatsApp
+```
+What time is it in New York?
+¿Qué hora es en Barcelona?
+What's the weather in London?
 ```
 
 ## 🔧 Troubleshooting
@@ -192,35 +237,92 @@ node scripts/test-multilingual.js
 - Verify OPENAI_API_KEY or LOCALAI_URL
 - Check model name in configuration
 
+**LLaMA Communication Error:**
+- Check LLaMA server: `docker ps | grep llama`
+- Restart LLaMA server: `docker-compose restart llama-server`
+
 ### Logs Location
 - Discord: `logs/discord.log`
 - Telegram: `logs/telegram.log`  
 - WhatsApp: `logs/whatsapp.log`
 
-## 🎯 Next Steps
+## 🚀 Production Deployment
 
-1. **Customize Vox's personality** in `backend/src/lib/language.js`
-2. **Add custom commands** in respective bot files
-3. **Deploy to production** using Docker
-4. **Monitor logs** for any issues
-5. **Join the community** and contribute!
+### Docker Production
+```bash
+# Build and start all services
+docker-compose up --build -d
 
-## 🆘 Support
+# Check status
+docker-compose ps
 
-- **Issues**: [GitHub Issues](https://github.com/VoxHash/vox-ai-chatbot/issues)
-- **Discussions**: [GitHub Discussions](https://github.com/VoxHash/vox-ai-chatbot/discussions)
-- **Setup Guide**: [SETUP.md](SETUP.md) for detailed instructions
+# View logs
+docker-compose logs -f
+```
+
+### Security Considerations
+1. **Use strong JWT secrets**
+2. **Enable HTTPS** with reverse proxy
+3. **Set up proper firewall rules**
+4. **Regular security updates**
+5. **Monitor logs** for suspicious activity
 
 ## 🤝 Contributing
 
 We welcome contributions! Please see our [Contributing Guide](CONTRIBUTING.md) for details.
 
-## 📄 License
+### Quick Start for Contributors
+1. **Read the documentation**
+2. **Set up the development environment**
+3. **Look for "good first issue" labels**
+4. **Start with small contributions**
+5. **Ask questions if you need help**
 
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+## 📞 Support
+
+- **Issues**: [GitHub Issues](https://github.com/VoxHash/vox-ai-chatbot/issues)
+- **Discussions**: [GitHub Discussions](https://github.com/VoxHash/vox-ai-chatbot/discussions)
+- **Creator**: VoxHash
+
+## 📋 Changelog
+
+### [0.0.2] - 2025-09-17
+
+#### ✨ Added
+- **Vox's Personality**: Female AI with nerdy goth-kawaii personality
+- **Multi-Platform Support**: Discord, Telegram, and WhatsApp bots
+- **Multilingual Support**: 9 languages (English, Spanish, French, German, Italian, Portuguese, Korean, Basque, Estonian)
+- **Real-Time Features**: Time and weather queries with location detection
+- **Conversation Memory**: Persistent context across sessions
+- **Emotion Detection**: Contextual responses and reactions
+- **QR Code Generation**: PNG images and terminal display for WhatsApp
+- **Comprehensive Documentation**: Consolidated from 20+ files to essential guides
+
+#### 🔧 Changed
+- **Package Structure**: Updated to v0.0.2 with proper metadata
+- **Bot Personality**: Enhanced with Vox's unique character traits
+- **Error Handling**: Improved fallback responses for API failures
+- **Location Detection**: Better parsing for complex location queries
+- **System Prompts**: Updated to reflect Vox's personality
+- **Documentation**: Consolidated from 20+ files to 2 main guides
+
+#### 🐛 Fixed
+- **WhatsApp Connection**: Improved stability and reconnection logic
+- **API Error Handling**: Better fallback responses for real-time queries
+- **Location Detection**: Fixed parsing for Spanish and complex queries
+- **Session Management**: Reduced cleanup noise in Baileys
+- **Memory System**: Fixed async/await issues in user memory loading
+- **Text Expressions**: Converted all text expressions to emojis
+- **QR Cleanup**: Fixed WhatsApp QR cleanup to delete old files before generating new ones
+
+#### 🗑️ Removed
+- **Excessive Documentation**: Removed 20+ duplicate documentation files
+- **Debug Scripts**: Cleaned up unnecessary test and debug files
+- **Duplicate Bot Versions**: Removed old WhatsApp bot implementations
+- **Old QR Images**: Cleaned up temporary QR code files
 
 ---
 
 **Made with ❤️ by VoxHash for the AI community**
 
-*Vox is ready to help you get started!* *giggles cutely* 🤖✨
+*Vox is excited to continue growing and evolving!* 🤖✨

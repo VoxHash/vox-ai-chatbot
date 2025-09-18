@@ -26,9 +26,38 @@ if (!BOT_TOKEN) {
 // Processing users to prevent duplicate processing
 const processingUsers = new Set();
 
+// Track current QR file for cleanup
+let currentQRFile = null;
+
+// Clean up old QR files
+function cleanupOldQRFiles() {
+  try {
+    const logsDir = '../logs';
+    if (fs.existsSync(logsDir)) {
+      const files = fs.readdirSync(logsDir);
+      const qrFiles = files.filter(file => file.startsWith('whatsapp-qr-') && file.endsWith('.png'));
+      
+      qrFiles.forEach(file => {
+        const filePath = `${logsDir}/${file}`;
+        try {
+          fs.unlinkSync(filePath);
+          console.log('🧹 Cleaned up old QR file:', file);
+        } catch (error) {
+          console.log('⚠️ Could not clean up old QR file:', file, error.message);
+        }
+      });
+    }
+  } catch (error) {
+    console.log('⚠️ Could not clean up old QR files:', error.message);
+  }
+}
+
 // QR Code generation function
 async function generateQRCodeImage(qrString) {
   try {
+    // Clean up old QR files first
+    cleanupOldQRFiles();
+    
     // Generate QR code as PNG buffer
     const qrBuffer = await QRCode.toBuffer(qrString, {
       type: 'png',
@@ -44,6 +73,9 @@ async function generateQRCodeImage(qrString) {
     const qrPath = `../logs/whatsapp-qr-${Date.now()}.png`;
     fs.writeFileSync(qrPath, qrBuffer);
     
+    // Update current QR file reference
+    currentQRFile = qrPath;
+    
     console.log('📱 QR Code image saved to:', qrPath);
     console.log('📱 You can open this image to scan with WhatsApp');
     
@@ -53,6 +85,9 @@ async function generateQRCodeImage(qrString) {
         if (fs.existsSync(qrPath)) {
           fs.unlinkSync(qrPath);
           console.log('🧹 QR code image cleaned up');
+          if (currentQRFile === qrPath) {
+            currentQRFile = null;
+          }
         }
       } catch (error) {
         console.log('⚠️ Could not clean up QR code image:', error.message);
