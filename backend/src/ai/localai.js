@@ -1,4 +1,5 @@
 import axios from 'axios';
+import { getSystemPrompt } from '../lib/language.js';
 
 // Use localhost for external connections, Docker service name for internal
 const LLAMA_URL = process.env.LLAMA_URL || 'http://localhost:8081';
@@ -203,4 +204,53 @@ function mock(messages) {
   
   // Default response for other questions
   return `I understand you're asking about "${last}". While I'm having some technical difficulties with my main AI system, I can help you with basic questions. Could you be more specific about what you'd like to know?`;
+}
+
+/**
+ * Get AI response with proper system prompt and language support
+ * @param {string} messageText - User message
+ * @param {string} userId - User ID
+ * @param {string} platform - Platform (discord, telegram, whatsapp, slack, web)
+ * @param {Array} conversationHistory - Previous conversation history
+ * @param {string} detectedLanguage - Detected language code
+ * @returns {Promise<string>} AI response
+ */
+export async function getAIResponse(messageText, userId, platform, conversationHistory = [], detectedLanguage = 'en') {
+  try {
+    // Get conversation summary for context
+    const conversationSummary = conversationHistory.slice(-5).map(msg => 
+      `${msg.role}: ${msg.content}`
+    ).join('\n');
+    
+    // Get system prompt with proper language and context
+    const systemPrompt = getSystemPrompt(detectedLanguage, userId, conversationSummary);
+    
+    // Build messages array
+    const messages = [
+      { 
+        role: 'system', 
+        content: systemPrompt
+      },
+      ...conversationHistory.slice(-5), // Use last 5 messages for context
+      { role: 'user', content: messageText }
+    ];
+    
+    // Use completeChat for AI response
+    const response = await completeChat(messages);
+    return response;
+    
+  } catch (error) {
+    console.error('Error in getAIResponse:', error);
+    
+    // Fallback response based on language
+    const fallbackResponses = {
+      en: "I'm having trouble processing your request right now. Please try again in a moment! 😊",
+      es: "Estoy teniendo problemas para procesar tu solicitud en este momento. ¡Por favor, inténtalo de nuevo en un momento! 😊",
+      fr: "J'ai des difficultés à traiter votre demande en ce moment. Veuillez réessayer dans un moment ! 😊",
+      ko: "지금 요청을 처리하는 데 문제가 있습니다. 잠시 후에 다시 시도해주세요! 😊",
+      eu: "Arazoak ditut zure eskaera prozesatzean oraintxe. Mesedez, saiatu berriro momentu batean! 😊"
+    };
+    
+    return fallbackResponses[detectedLanguage] || fallbackResponses.en;
+  }
 }

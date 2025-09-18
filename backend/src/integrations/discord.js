@@ -1,14 +1,14 @@
 import 'dotenv/config';
 import { Client, GatewayIntentBits, Events, SlashCommandBuilder, REST, Routes } from 'discord.js';
-import { completeChat } from '../ai/openai.js';
+import { getAIResponse } from '../ai/localai.js';
 import { 
   loadUserMemory, 
   addToUserMemory, 
   getConversationSummary, 
-  detectLanguage, 
   hasUserBeenGreeted,
   getUserPreferredLanguage 
 } from '../lib/memory.js';
+import { detectLanguageSimple } from '../lib/language-detection-simple.js';
 import { getLocalizedResponse, getSystemPrompt } from '../lib/language.js';
 import { getCurrentTime, getCurrentWeather, getLocationInfo, formatLocationInfo } from '../lib/realtime.js';
 
@@ -236,8 +236,8 @@ client.on(Events.InteractionCreate, async interaction => {
       console.log(`📍 Channel: ${interaction.channel ? (interaction.channel.type === 'DM' ? 'DM' : interaction.channel.name) : 'Unknown'}`);
       console.log(`👤 User: ${interaction.user.username}`);
       
-      // Detect language from current message and conversation history
-      const detectedLanguage = await detectLanguage(userId, 'discord', message);
+      // Detect language from current message
+      const detectedLanguage = detectLanguageSimple(message);
       console.log(`🌍 Detected language: ${detectedLanguage}`);
       
       // Add user message to persistent memory
@@ -378,7 +378,7 @@ client.on(Events.InteractionCreate, async interaction => {
         { role: 'user', content: message }
       ];
       
-      const aiResponse = await completeChat(messages);
+      const aiResponse = await getAIResponse(message, userId, 'discord', recentHistory, detectedLanguage);
       console.log(`🤖 AI Response: ${aiResponse}`);
       
       // Add AI response to persistent memory
@@ -523,8 +523,8 @@ client.on(Events.MessageCreate, async message => {
     
     processingUsers.add(userId);
     
-    // Detect language from current message and conversation history
-    const detectedLanguage = await detectLanguage(userId, 'discord', cleanText);
+    // Detect language from current message
+    const detectedLanguage = detectLanguageSimple(cleanText);
     console.log(`🌍 Detected language: ${detectedLanguage}`);
     
     // Add user message to persistent memory
@@ -571,7 +571,7 @@ client.on(Events.MessageCreate, async message => {
       { role: 'user', content: cleanText }
     ];
     
-    const aiResponse = await completeChat(messages);
+    const aiResponse = await getAIResponse(cleanText, userId, 'discord', recentHistory, detectedLanguage);
     console.log(`🤖 AI Response: ${aiResponse}`);
     
     // Add AI response to persistent memory

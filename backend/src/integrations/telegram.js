@@ -1,15 +1,15 @@
 import 'dotenv/config';
 import express from 'express';
 import fetch from 'node-fetch';
-import { completeChat } from '../ai/openai.js';
+import { getAIResponse } from '../ai/localai.js';
 import { 
   loadUserMemory, 
   addToUserMemory, 
   getConversationSummary, 
-  detectLanguage, 
   hasUserBeenGreeted,
   getUserPreferredLanguage 
 } from '../lib/memory.js';
+import { detectLanguageSimple } from '../lib/language-detection-simple.js';
 import { getLocalizedResponse, getSystemPrompt } from '../lib/language.js';
 import { getCurrentTime, getCurrentWeather, getLocationInfo, formatLocationInfo } from '../lib/realtime.js';
 
@@ -310,8 +310,8 @@ async function getUpdates() {
                     processingUsers.add(userId);
                     
                     try {
-                      // Detect language from current message and conversation history
-                      const detectedLanguage = await detectLanguage(userId, 'telegram', cleanText);
+                      // Detect language from current message
+                      const detectedLanguage = detectLanguageSimple(cleanText);
                       console.log(`🌍 Detected language: ${detectedLanguage}`);
                       
                       // Add user message to persistent memory
@@ -469,7 +469,7 @@ async function getUpdates() {
                         { role: 'user', content: cleanText }
                       ];
                       
-                      const aiResponse = await completeChat(messages);
+                      const aiResponse = await getAIResponse(cleanText, userId, 'telegram', recentHistory, detectedLanguage);
                       console.log(`🤖 AI Response: ${aiResponse}`);
                       
                       // Add AI response to persistent memory

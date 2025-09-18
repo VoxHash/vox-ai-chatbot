@@ -2,15 +2,15 @@ import express from 'express';
 import { z } from 'zod';
 import { pool } from '../lib/db.js';
 import { requireAuth, requireAdmin } from '../middleware/auth.js';
-import { completeChat } from '../ai/openai.js';
+import { getAIResponse } from '../ai/localai.js';
 import { 
   loadUserMemory, 
   addToUserMemory, 
   getConversationSummary, 
-  detectLanguage, 
   hasUserBeenGreeted,
   getUserPreferredLanguage 
 } from '../lib/memory.js';
+import { detectLanguageSimple } from '../lib/language-detection-simple.js';
 import { getLocalizedResponse, getSystemPrompt } from '../lib/language.js';
 import { getCurrentTime, getCurrentWeather, getLocationInfo, formatLocationInfo } from '../lib/realtime.js';
 
@@ -30,8 +30,8 @@ router.post('/message', requireAuth, async (req, res) => {
     const { conversationId, message } = msgSchema.parse(req.body);
     const userId = req.user.sub;
     
-    // Detect language from current message and conversation history
-    const detectedLanguage = await detectLanguage(userId, 'web', message);
+    // Detect language from current message
+    const detectedLanguage = detectLanguageSimple(message);
     console.log(`🌍 Detected language: ${detectedLanguage}`);
     
     // Add user message to persistent memory
@@ -184,7 +184,7 @@ router.post('/message', requireAuth, async (req, res) => {
       { role: 'user', content: message }
     ];
     
-    const reply = await completeChat(messages);
+    const reply = await getAIResponse(message, userId, 'web', recentHistory, detectedLanguage);
     
     // Add AI response to persistent memory
     await addToUserMemory(userId, 'web', 'assistant', reply, { platform: 'web' });
