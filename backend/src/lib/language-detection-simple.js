@@ -123,6 +123,29 @@ export function detectLanguageSimple(message) {
     'egiten', 'egiten dut', 'egiten du', 'egiten dugu', 'egiten dute', 'egin',
     'egiten ari', 'egiten zuen', 'egingo', 'egin daiteke', 'ezin', 'ez', 'ez du'
   ];
+
+  // Estonian indicators
+  const estonianPatterns = [
+    'tere', 'hei', 'tsau', 'aitäh', 'tänan', 'palun', 'vabandust', 'vabandage',
+    'jah', 'ei', 'abiks', 'aidata', 'info', 'informatsioon', 'küsimus', 'vastus',
+    'ütle', 'ütle mulle', 'kuidas', 'mis', 'millal', 'kus', 'miks', 'kes',
+    'kui palju', 'milline', 'mina', 'sina', 'tema', 'meie', 'nad', 'on', 'ei ole',
+    'teen', 'teed', 'teeb', 'teeme', 'teevad', 'ütlen', 'ütled', 'ütleb', 'ütleme',
+    'ütlevad', 'olen', 'oled', 'on', 'oleme', 'olete', 'on', 'mul', 'sul', 'tal',
+    'meil', 'teil', 'neil', 'ma', 'sa', 'ta', 'me', 'te', 'nad', 'see', 'need',
+    'see', 'need', 'see', 'need', 'see', 'need', 'see', 'need', 'see', 'need',
+    'väga', 'palju', 'vähe', 'hea', 'halb', 'suur', 'väike', 'uus', 'vana',
+    'noor', 'ilus', 'inetu', 'õnnelik', 'kurb', 'vihane', 'hirmul', 'segaduses',
+    'armastus', 'tundma', 'tunne', 'tunneb', 'tunnete', 'tunnevad', 'tundma',
+    'tundma', 'tundma', 'tundma', 'tundma', 'tundma', 'tundma', 'tundma',
+    'eesti', 'eestlane', 'eestlased', 'eestikeel', 'eestikeelne', 'eestikeelsed',
+    'tallinn', 'tartu', 'pärnu', 'viljandi', 'rakvere', 'kuressaare', 'võru',
+    'valga', 'haapsalu', 'jõhvi', 'paide', 'keila', 'sillamäe', 'maardu',
+    'tapa', 'kiviõli', 'elva', 'saue', 'jõgeva', 'rapla', 'põlva', 'kallaste',
+    'tõrva', 'karksi-nuia', 'antsla', 'mustvee', 'lõuna-tallinn', 'põhja-tallinn',
+    'kesklinn', 'kadriorg', 'kalamaja', 'pelgulinn', 'lasnamäe', 'mustamäe',
+    'õismäe', 'haabersti', 'kristiine', 'nõmme', 'pirita', 'viimsi'
+  ];
   
   // Count matches for each language
   let spanishCount = 0;
@@ -131,6 +154,7 @@ export function detectLanguageSimple(message) {
   let koreanCount = 0;
   let basqueCount = 0;
   let portugueseCount = 0;
+  let estonianCount = 0;
   
   for (const pattern of spanishPatterns) {
     if (lowerMessage.includes(pattern)) {
@@ -168,6 +192,12 @@ export function detectLanguageSimple(message) {
     }
   }
   
+  for (const pattern of estonianPatterns) {
+    if (lowerMessage.includes(pattern)) {
+      estonianCount++;
+    }
+  }
+  
   // Return the language with the most matches
   const counts = [
     { lang: 'es', count: spanishCount },
@@ -175,7 +205,8 @@ export function detectLanguageSimple(message) {
     { lang: 'en', count: englishCount },
     { lang: 'ko', count: koreanCount },
     { lang: 'eu', count: basqueCount },
-    { lang: 'pt', count: portugueseCount }
+    { lang: 'pt', count: portugueseCount },
+    { lang: 'et', count: estonianCount }
   ];
   
   const maxCount = Math.max(...counts.map(c => c.count));
