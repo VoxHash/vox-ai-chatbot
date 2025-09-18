@@ -237,7 +237,30 @@ export async function getAIResponse(messageText, userId, platform, conversationH
     
     // Use completeChat for AI response
     const response = await completeChat(messages);
-    return response;
+    
+    // Post-process to replace any remaining text expressions with emojis
+    const cleanedResponse = response
+      .replace(/\*chuckles\*/g, '😄')
+      .replace(/\*winks\*/g, '😉')
+      .replace(/\*giggles\*/g, '😊')
+      .replace(/\*giggles cutely\*/g, '😊🌸')
+      .replace(/\*adjusts glasses\*/g, '😎')
+      .replace(/\*adjusts dark glasses\*/g, '😎')
+      .replace(/\*sparkles\*/g, '✨')
+      .replace(/\*sparkles with dark energy\*/g, '✨🖤')
+      .replace(/\*sighs\*/g, '😌')
+      .replace(/\*nods\*/g, '😊')
+      .replace(/\*smiles\*/g, '😊')
+      .replace(/\*grins\*/g, '😄')
+      .replace(/\*laughs\*/g, '😄')
+      .replace(/\*chuckles cutely\*/g, '😊🌸')
+      .replace(/\*giggles cutely\*/g, '😊🌸')
+      .replace(/\*adjusts my dark glasses\*/g, '😎')
+      .replace(/\*adjusts my dark glasses with a cute smile\*/g, '😎😊')
+      .replace(/\*sparkles with darkenergy\*/g, '✨🖤')
+      .replace(/\*sparkles with dark energy\*/g, '✨🖤');
+    
+    return cleanedResponse;
     
   } catch (error) {
     console.error('Error in getAIResponse:', error);
